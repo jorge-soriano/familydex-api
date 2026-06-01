@@ -1,9 +1,16 @@
 import request from 'supertest';
 import app from '../../src/app';
 import { sequelize } from '../../src/models';
+import { migrateUp, migrateDown, clearAll } from '../helpers/db';
 
 beforeAll(async () => {
-  await sequelize.sync({ force: true });
+  // Roll back then re-apply all migrations → guaranteed clean schema
+  await migrateDown();
+  await migrateUp();
+});
+
+beforeEach(async () => {
+  await clearAll();
 });
 
 afterAll(async () => {
@@ -25,31 +32,29 @@ describe('POST /api/auth/register', () => {
   });
 
   it('409 when email already exists', async () => {
+    await request(app).post('/api/auth/register').send({
+      email: 'admin@test.com', username: 'admin1',
+      password: 'Password1', confirmPassword: 'Password1',
+    });
     const res = await request(app).post('/api/auth/register').send({
-      email: 'admin@test.com',
-      username: 'admin2',
-      password: 'Password1',
-      confirmPassword: 'Password1',
+      email: 'admin@test.com', username: 'admin2',
+      password: 'Password1', confirmPassword: 'Password1',
     });
     expect(res.status).toBe(409);
   });
 
   it('400 when passwords do not match', async () => {
     const res = await request(app).post('/api/auth/register').send({
-      email: 'other@test.com',
-      username: 'admin3',
-      password: 'Password1',
-      confirmPassword: 'Different1',
+      email: 'other@test.com', username: 'admin3',
+      password: 'Password1', confirmPassword: 'Different1',
     });
     expect(res.status).toBe(400);
   });
 
   it('400 when password too weak', async () => {
     const res = await request(app).post('/api/auth/register').send({
-      email: 'weak@test.com',
-      username: 'admin4',
-      password: 'password',
-      confirmPassword: 'password',
+      email: 'weak@test.com', username: 'admin4',
+      password: 'password', confirmPassword: 'password',
     });
     expect(res.status).toBe(400);
   });
@@ -58,6 +63,13 @@ describe('POST /api/auth/register', () => {
 // ─── Login ───────────────────────────────────────────────────────────────────
 
 describe('POST /api/auth/login', () => {
+  beforeEach(async () => {
+    await request(app).post('/api/auth/register').send({
+      email: 'admin@test.com', username: 'admin1',
+      password: 'Password1', confirmPassword: 'Password1',
+    });
+  });
+
   it('200 and JWT for valid admin credentials', async () => {
     const res = await request(app)
       .post('/api/auth/login')
@@ -86,10 +98,11 @@ describe('POST /api/auth/login', () => {
 describe('POST /api/auth/children', () => {
   let adminToken: string;
 
-  beforeAll(async () => {
-    const res = await request(app)
-      .post('/api/auth/login')
-      .send({ identifier: 'admin@test.com', password: 'Password1' });
+  beforeEach(async () => {
+    const res = await request(app).post('/api/auth/register').send({
+      email: 'admin@test.com', username: 'admin1',
+      password: 'Password1', confirmPassword: 'Password1',
+    });
     adminToken = res.body.token;
   });
 
@@ -104,6 +117,11 @@ describe('POST /api/auth/children', () => {
   });
 
   it('409 when username already exists in family', async () => {
+    await request(app)
+      .post('/api/auth/children')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ username: 'kid1', password: 'pass123', displayName: 'Kid One' });
+
     const res = await request(app)
       .post('/api/auth/children')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -119,44 +137,62 @@ describe('POST /api/auth/children', () => {
   });
 
   it('403 when called by a child', async () => {
-    // Login as child
+    await request(app)
+      .post('/api/auth/children')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ username: 'kid1', password: 'pass123', displayName: 'Kid One' });
+
     const loginRes = await request(app)
       .post('/api/auth/login')
       .send({ identifier: 'kid1', password: 'pass123' });
-    const childToken = loginRes.body.token;
 
     const res = await request(app)
       .post('/api/auth/children')
-      .set('Authorization', `Bearer ${childToken}`)
+      .set('Authorization', `Bearer ${loginRes.body.token}`)
       .send({ username: 'kid2', password: 'pass123', displayName: 'Kid Two' });
     expect(res.status).toBe(403);
   });
 
-  it('child login works with username', async () => {
+  it('child JWT contains role=child and correct familyId', async () => {
+    await request(app)
+      .post('/api/auth/children')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ username: 'kid1', password: 'pass123', displayName: 'Kid One' });
+
     const res = await request(app)
       .post('/api/auth/login')
       .send({ identifier: 'kid1', password: 'pass123' });
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('token');
 
     const payload = JSON.parse(
       Buffer.from(res.body.token.split('.')[1], 'base64').toString()
     );
     expect(payload.role).toBe('child');
+
+    const adminPayload = JSON.parse(
+      Buffer.from(adminToken.split('.')[1], 'base64').toString()
+    );
+    expect(payload.familyId).toBe(adminPayload.familyId);
   });
 });
 
 // ─── Logout ──────────────────────────────────────────────────────────────────
 
 describe('POST /api/auth/logout', () => {
-  it('200 with valid token', async () => {
-    const loginRes = await request(app)
-      .post('/api/auth/login')
-      .send({ identifier: 'admin@test.com', password: 'Password1' });
+  let token: string;
 
+  beforeEach(async () => {
+    const res = await request(app).post('/api/auth/register').send({
+      email: 'admin@test.com', username: 'admin1',
+      password: 'Password1', confirmPassword: 'Password1',
+    });
+    token = res.body.token;
+  });
+
+  it('200 with valid token', async () => {
     const res = await request(app)
       .post('/api/auth/logout')
-      .set('Authorization', `Bearer ${loginRes.body.token}`);
+      .set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
   });
 
