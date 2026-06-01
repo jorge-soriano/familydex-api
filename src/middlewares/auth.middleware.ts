@@ -5,7 +5,7 @@ import { jwtConfig } from '../config/jwt';
 export interface JwtPayload {
   userId: number;
   role: 'admin' | 'child';
-  familyId: number;
+  familyId: string;
 }
 
 declare global {

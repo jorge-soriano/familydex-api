@@ -1,10 +1,14 @@
 import { sequelize } from '../config/database';
+import { User } from './user.model';
+import { ChildProfile } from './childProfile.model';
 
-// Models are imported and associated here as each epic is implemented.
-// Épica 1: User, ChildProfile
+// Épica 1
+User.hasOne(ChildProfile, { foreignKey: 'userId', as: 'childProfile' });
+ChildProfile.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
 // Épica 2: Task, TaskSeries
 // Épica 3: Transaction
 // Épica 4: Pokemon, CaughtPokemon
 // Épica 5: Reward, RewardRequest
 
-export { sequelize };
+export { sequelize, User, ChildProfile };
