@@ -34,18 +34,18 @@ export class User
 
 User.init(
   {
-    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-    familyId: { type: DataTypes.UUID, allowNull: false },
-    username: { type: DataTypes.STRING(50), allowNull: false },
-    email: { type: DataTypes.STRING, unique: true, allowNull: true },
+    id:           { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    familyId:     { type: DataTypes.UUID, allowNull: false },
+    username:     { type: DataTypes.STRING(50), allowNull: false },
+    email:        { type: DataTypes.STRING, unique: true, allowNull: true },
     passwordHash: { type: DataTypes.STRING, allowNull: false },
-    role: { type: DataTypes.ENUM('admin', 'child'), allowNull: false },
-    isActive: { type: DataTypes.BOOLEAN, defaultValue: true },
+    role:         { type: DataTypes.ENUM('admin', 'child'), allowNull: false },
+    isActive:     { type: DataTypes.BOOLEAN, defaultValue: true },
   },
   {
     sequelize,
     tableName: 'users',
     modelName: 'User',
-    indexes: [{ unique: true, fields: ['username', 'familyId'] }],
+    underscored: true,  // familyId → family_id, passwordHash → password_hash, etc.
   }
 );

@@ -29,10 +29,10 @@ export class ChildProfile
 
 ChildProfile.init(
   {
-    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-    userId: { type: DataTypes.INTEGER, allowNull: false, unique: true },
-    coins: { type: DataTypes.INTEGER, defaultValue: 0 },
-    xp: { type: DataTypes.INTEGER, defaultValue: 0 },
+    id:          { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    userId:      { type: DataTypes.INTEGER, allowNull: false, unique: true },
+    coins:       { type: DataTypes.INTEGER, defaultValue: 0 },
+    xp:          { type: DataTypes.INTEGER, defaultValue: 0 },
     displayName: { type: DataTypes.STRING(100), allowNull: false },
     avatarColor: { type: DataTypes.STRING(7), allowNull: true },
   },
@@ -40,5 +40,6 @@ ChildProfile.init(
     sequelize,
     tableName: 'child_profiles',
     modelName: 'ChildProfile',
+    underscored: true,  // userId → user_id, displayName → display_name, etc.
   }
 );
