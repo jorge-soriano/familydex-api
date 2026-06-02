@@ -169,8 +169,6 @@ export const taskService = {
   async generateRecurringTasks(): Promise<number> {
     const today = new Date();
     const dayOfWeek = today.getDay();
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const endOfDay   = new Date(startOfDay.getTime() + 86_400_000);
 
     const activeSeries = await TaskSeries.findAll({ where: { isActive: true } });
     let created = 0;
@@ -181,13 +179,13 @@ export const taskService = {
         if (!days.includes(dayOfWeek)) continue;
       }
 
-      const exists = await Task.findOne({
-        where: {
-          seriesId: series.id,
-          createdAt: { [Op.gte]: startOfDay, [Op.lt]: endOfDay },
-        },
+      // No crear nueva instancia si ya hay una Pending (el niño aún no la ha hecho).
+      // Sí crear si está InReview (el niño cumplió, el padre aún no ha revisado),
+      // Approved o Rejected (resuelta, toca una nueva).
+      const pendingExists = await Task.findOne({
+        where: { seriesId: series.id, status: 'Pending' },
       });
-      if (exists) continue;
+      if (pendingExists) continue;
 
       await Task.create({
         familyId: series.familyId,
