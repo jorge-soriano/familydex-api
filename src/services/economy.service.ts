@@ -152,4 +152,46 @@ export const economyService = {
 
     return evolutionResult ? { evolutionResult } : {};
   },
+
+  /**
+   * Unified direct record — replaces separate penalty + directReward.
+   * coinsDelta can be positive (reward) or negative (penalty, floors at 0).
+   * xp is always >= 0 (never decreases).
+   * Supports multiple children at once.
+   */
+  async applyDirectRecord(
+    childUserIds: number[],
+    coinsDelta: number,
+    xp: number,
+    reason: string
+  ): Promise<void> {
+    if (xp < 0) throw new AppError(400, 'XP no puede ser negativa');
+    if (coinsDelta === 0 && xp === 0) {
+      throw new AppError(400, 'Al menos monedas o XP deben ser distintos de 0');
+    }
+
+    for (const childUserId of childUserIds) {
+      const profile = await ChildProfile.findOne({ where: { userId: childUserId } });
+      if (!profile) throw new AppError(404, `Perfil no encontrado para hijo ${childUserId}`);
+
+      // Coins floor at 0 (no negative balance)
+      const coinsBefore = profile.coins;
+      const coinsAfter  = Math.max(0, coinsBefore + coinsDelta);
+      const actualDelta = coinsAfter - coinsBefore; // real change (may differ if floored)
+
+      await profile.update({ coins: coinsAfter, xp: profile.xp + xp });
+
+      await Transaction.create({
+        childId: childUserId,
+        type: 'DirectRecord',
+        coinsDelta: actualDelta,
+        xpDelta: xp,
+        description: reason,
+      });
+
+      if (xp > 0) {
+        await pokemonService.addXpToActive(childUserId, xp);
+      }
+    }
+  },
 };

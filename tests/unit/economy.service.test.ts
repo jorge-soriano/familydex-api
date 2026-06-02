@@ -223,3 +223,70 @@ describe('economyService.applyDirectReward', () => {
     expect(pokemonService.addXpToActive).not.toHaveBeenCalled();
   });
 });
+
+// ── applyDirectRecord ─────────────────────────────────────────────────────────
+describe('economyService.applyDirectRecord', () => {
+  it('positive coinsDelta adds coins + XP, creates DirectRecord transaction', async () => {
+    const profile = makeProfile(100, 500);
+    MockProfile.findOne.mockResolvedValue(profile);
+    MockTransaction.create.mockResolvedValue({});
+
+    await economyService.applyDirectRecord([2], 20, 50, 'Buen comportamiento');
+
+    expect(profile.update).toHaveBeenCalledWith({ coins: 120, xp: 550 });
+    expect(MockTransaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'DirectRecord', coinsDelta: 20, xpDelta: 50 })
+    );
+  });
+
+  it('negative coinsDelta deducts coins (floors at 0)', async () => {
+    const profile = makeProfile(10, 200);
+    MockProfile.findOne.mockResolvedValue(profile);
+    MockTransaction.create.mockResolvedValue({});
+
+    await economyService.applyDirectRecord([2], -30, 0, 'Penalización');
+
+    // Only 10 can be deducted (profile had 10)
+    expect(profile.update).toHaveBeenCalledWith({ coins: 0, xp: 200 });
+    expect(MockTransaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({ coinsDelta: -10 })
+    );
+  });
+
+  it('XP never negative — throws when xp < 0', async () => {
+    await expect(
+      economyService.applyDirectRecord([2], 10, -5, 'test')
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('throws 400 when coinsDelta=0 and xp=0', async () => {
+    await expect(
+      economyService.applyDirectRecord([2], 0, 0, 'nada')
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('handles multiple children — creates one transaction per child', async () => {
+    const p1 = makeProfile(50, 100);
+    const p2 = makeProfile(30, 200);
+    MockProfile.findOne
+      .mockResolvedValueOnce(p1)
+      .mockResolvedValueOnce(p2);
+    MockTransaction.create.mockResolvedValue({});
+
+    await economyService.applyDirectRecord([2, 3], 10, 50, 'Recompensa colectiva');
+
+    expect(MockTransaction.create).toHaveBeenCalledTimes(2);
+  });
+
+  it('calls pokemonService.addXpToActive for each child when xp > 0', async () => {
+    MockProfile.findOne.mockResolvedValue(makeProfile(0, 0));
+    MockTransaction.create.mockResolvedValue({});
+    const { pokemonService } = require('../../src/services/pokemon.service');
+    jest.clearAllMocks();
+    MockProfile.findOne.mockResolvedValue(makeProfile(0, 0));
+    MockTransaction.create.mockResolvedValue({});
+
+    await economyService.applyDirectRecord([2], 5, 30, 'XP bonus');
+    expect(pokemonService.addXpToActive).toHaveBeenCalledWith(2, 30);
+  });
+});

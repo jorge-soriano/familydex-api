@@ -190,3 +190,23 @@ describe('taskService.createCompletedTaskByAdmin', () => {
     ).rejects.toMatchObject({ status: 400 });
   });
 });
+
+// ── multi-asignación (vía controller, no service) ─────────────────────────────
+// El servicio createTask sigue aceptando un solo childId.
+// El controller gestiona el array y llama createTask N veces.
+// Aquí verificamos que el servicio sigue funcionando para un hijo.
+describe('taskService.createTask (single — multi-assign is handled in controller)', () => {
+  it('still works correctly for a single child', async () => {
+    MockUser.findOne.mockResolvedValue({ id: 3 });
+    MockTask.create.mockResolvedValue({ id: 20, status: 'Pending' });
+
+    const task = await taskService.createTask(
+      { assignedTo: 3, title: 'Poner la mesa', type: 'hogar', coinsReward: 5, xpReward: 25, frequency: 'OneTime' },
+      FAMILY
+    );
+    expect(task).toBeDefined();
+    expect(MockTask.create).toHaveBeenCalledWith(
+      expect.objectContaining({ assignedTo: 3, familyId: FAMILY })
+    );
+  });
+});

@@ -69,6 +69,32 @@ export const economyController = {
     } catch (err) { next(err); }
   },
 
+  // POST /api/economy/direct-record (admin) — unified reward/penalty for one or more children
+  async directRecord(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { childIds, coinsDelta, xp, reason } = req.body as {
+        childIds: number | number[]; coinsDelta: number; xp: number; reason: string;
+      };
+
+      const ids = Array.isArray(childIds) ? childIds : [childIds];
+      if (!ids.length || !reason) {
+        res.status(400).json({ message: 'childIds y reason son obligatorios' }); return;
+      }
+      if (xp < 0) {
+        res.status(400).json({ message: 'XP no puede ser negativa' }); return;
+      }
+      if (coinsDelta === 0 && xp === 0) {
+        res.status(400).json({ message: 'Al menos monedas o XP deben ser distintos de 0' }); return;
+      }
+
+      for (const childId of ids) {
+        await economyService.assertChildInFamily(Number(childId), req.user!.familyId);
+      }
+      await economyService.applyDirectRecord(ids.map(Number), Number(coinsDelta), Number(xp), reason);
+      res.status(200).json({ message: 'Registro aplicado' });
+    } catch (err) { next(err); }
+  },
+
   // POST /api/economy/direct-reward (admin) — coins/XP without creating a Task
   async directReward(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {

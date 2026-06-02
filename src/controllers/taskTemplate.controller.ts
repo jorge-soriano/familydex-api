@@ -6,8 +6,11 @@ export const taskTemplateController = {
   // GET /api/task-templates
   async getTemplates(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const onlyActive = req.query.active === 'true';
-      const templates = await taskTemplateService.getTemplates(req.user!.familyId, onlyActive);
+      const onlyActive    = req.query.active === 'true';
+      const presetFilter  = req.query.preset === 'true' ? true
+                          : req.query.preset === 'false' ? false
+                          : undefined;
+      const templates = await taskTemplateService.getTemplates(req.user!.familyId, onlyActive, presetFilter);
       res.json(templates);
     } catch (err) { next(err); }
   },

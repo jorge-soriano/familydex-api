@@ -19,18 +19,23 @@ export const taskController = {
     } catch (err) { next(err); }
   },
 
-  // POST /api/tasks (admin)
+  // POST /api/tasks (admin) — assignedTo acepta number o number[] para multi-asignación
   async createTask(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const dto = req.body as CreateTaskDto;
-      if (!dto.title || !dto.type || !dto.assignedTo || dto.frequency === undefined) {
+      const body = req.body as CreateTaskDto & { assignedTo: number | number[] };
+      if (!body.title || !body.type || !body.assignedTo || body.frequency === undefined) {
         res.status(400).json({ message: 'Faltan campos obligatorios' }); return;
       }
-      if ((dto.coinsReward ?? 0) < 0 || (dto.xpReward ?? 0) < 0) {
+      if ((body.coinsReward ?? 0) < 0 || (body.xpReward ?? 0) < 0) {
         res.status(400).json({ message: 'Las recompensas no pueden ser negativas' }); return;
       }
-      const task = await taskService.createTask(dto, req.user!.familyId);
-      res.status(201).json(task);
+
+      const childIds = Array.isArray(body.assignedTo) ? body.assignedTo : [body.assignedTo];
+      const tasks = await Promise.all(
+        childIds.map((id) => taskService.createTask({ ...body, assignedTo: id }, req.user!.familyId))
+      );
+      // Single child → return object for backward compat; multiple → return array
+      res.status(201).json(tasks.length === 1 ? tasks[0] : tasks);
     } catch (err) { next(err); }
   },
 

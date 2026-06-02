@@ -64,9 +64,10 @@ export const taskTemplateService = {
     return tpl;
   },
 
-  async getTemplates(familyId: string, onlyActive = false): Promise<TaskTemplate[]> {
+  async getTemplates(familyId: string, onlyActive = false, isRecordPreset?: boolean): Promise<TaskTemplate[]> {
     const where: Record<string, unknown> = { familyId };
     if (onlyActive) where.isActive = true;
+    if (isRecordPreset !== undefined) where.isRecordPreset = isRecordPreset;
     return TaskTemplate.findAll({ where, order: [['sortOrder', 'ASC NULLS LAST'], ['createdAt', 'ASC']] });
   },
 
