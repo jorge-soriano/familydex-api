@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { authService } from '../../src/services/auth.service';
 import { User } from '../../src/models/user.model';
 import { ChildProfile } from '../../src/models/childProfile.model';
