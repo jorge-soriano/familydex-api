@@ -6,6 +6,7 @@ services:
       POSTGRES_DB: familydex_dev
       POSTGRES_USER: familydex
       POSTGRES_PASSWORD: familydex
+      POSTGRES_HOST_AUTH_METHOD: md5   # compatibilidad con pg node driver en Windows
     ports:
       - "5433:5432"
     volumes:
