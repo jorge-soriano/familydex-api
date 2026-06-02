@@ -163,9 +163,11 @@ export const pokemonService = {
     });
     const caughtIds = alreadyCaught.map((c) => c.pokemonId);
 
-    // unlockXp >= 0 includes starters not chosen; <= profile.xp limits to what's reachable
+    // Only base forms (evolutionOrder=1) and standalone pokemon (null) are capturable.
+    // Evolutions (Charmeleon, Charizard…) are obtained by evolving, not by capture.
     return Pokemon.findAll({
       where: {
+        [Op.or]: [{ evolutionOrder: null }, { evolutionOrder: 1 }],
         unlockXp: { [Op.gte]: 0, [Op.lte]: profile.xp },
         ...(caughtIds.length ? { id: { [Op.notIn]: caughtIds } } : {}),
       },
@@ -187,6 +189,9 @@ export const pokemonService = {
 
     const pokemon = await Pokemon.findByPk(pokemonId);
     if (!pokemon) throw new AppError(400, 'Pokémon no encontrado');
+    if (pokemon.evolutionOrder !== null && pokemon.evolutionOrder > 1) {
+      throw new AppError(400, 'Las evoluciones no se capturan, se obtienen evolucionando');
+    }
     if (pokemon.unlockXp > profile.xp) {
       throw new AppError(400, 'No tienes suficiente XP para capturar este Pokémon');
     }
