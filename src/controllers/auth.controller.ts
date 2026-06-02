@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from '../services/auth.service';
+import { User } from '../models/user.model';
+import { ChildProfile } from '../models/childProfile.model';
 
 function validateRegister(body: Record<string, unknown>): string | null {
   const { email, password, confirmPassword, username } = body;
@@ -71,5 +73,24 @@ export const authController = {
   // HU-04: logout es solo cliente; el servidor confirma la recepción
   logout(_req: Request, res: Response): void {
     res.status(200).json({ message: 'Sesión cerrada' });
+  },
+
+  // GET /api/auth/children — returns family children for admin UI selectors
+  async listChildren(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const users = await User.findAll({
+        where: { familyId: req.user!.familyId, role: 'child', isActive: true },
+        include: [{ model: ChildProfile, as: 'childProfile' }],
+      });
+      res.json(
+        users.map((u) => ({
+          id: u.id,
+          username: u.username,
+          displayName: (u as any).childProfile?.displayName ?? u.username,
+        }))
+      );
+    } catch (err) {
+      next(err);
+    }
   },
 };

@@ -9,5 +9,6 @@ router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.post('/logout', authenticate, authController.logout);
 router.post('/children', authenticate, requireAdmin, authController.createChild);
+router.get('/children',  authenticate, requireAdmin, authController.listChildren);
 
 export default router;
