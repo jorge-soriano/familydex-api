@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { taskService, CreateTaskDto, EditTaskDto } from '../services/task.service';
+import { taskService, CreateTaskDto, EditTaskDto, CreateCompletedTaskDto } from '../services/task.service';
 import type { TaskStatus, TaskType } from '../models/task.model';
 
 export const taskController = {
@@ -85,6 +85,21 @@ export const taskController = {
         Number(req.params.id), reason ?? null, req.user!.familyId
       );
       res.json(task);
+    } catch (err) { next(err); }
+  },
+
+  // POST /api/tasks/quick-complete (admin) — registers already-completed achievement
+  async quickComplete(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const dto = req.body as CreateCompletedTaskDto;
+      if (!dto.childId || !dto.title || !dto.type) {
+        res.status(400).json({ message: 'childId, title y type son obligatorios' }); return;
+      }
+      if ((dto.coinsReward ?? 0) < 0 || (dto.xpReward ?? 0) < 0) {
+        res.status(400).json({ message: 'Las recompensas no pueden ser negativas' }); return;
+      }
+      const result = await taskService.createCompletedTaskByAdmin(dto, req.user!.familyId);
+      res.status(201).json(result);
     } catch (err) { next(err); }
   },
 };

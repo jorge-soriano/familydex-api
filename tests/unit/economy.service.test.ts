@@ -162,3 +162,64 @@ describe('economyService.assertChildInFamily', () => {
     ).rejects.toMatchObject({ status: 403 });
   });
 });
+
+// ── applyDirectReward ─────────────────────────────────────────────────────────
+describe('economyService.applyDirectReward', () => {
+  it('adds coins and XP to profile, records DirectReward Transaction', async () => {
+    const profile = makeProfile(100, 500);
+    MockProfile.findOne.mockResolvedValue(profile);
+    MockTransaction.create.mockResolvedValue({});
+
+    await economyService.applyDirectReward(2, 15, 75, 'Buen comportamiento');
+
+    expect(profile.update).toHaveBeenCalledWith({ coins: 115, xp: 575 });
+    expect(MockTransaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'DirectReward', coinsDelta: 15, xpDelta: 75 })
+    );
+  });
+
+  it('XP never decreases — applyDirectReward only adds', async () => {
+    const profile = makeProfile(50, 1000);
+    MockProfile.findOne.mockResolvedValue(profile);
+    MockTransaction.create.mockResolvedValue({});
+
+    await economyService.applyDirectReward(2, 0, 100, 'bonus XP');
+    expect(profile.update).toHaveBeenCalledWith({ coins: 50, xp: 1100 });
+  });
+
+  it('throws 400 when both coins and xp are 0', async () => {
+    await expect(
+      economyService.applyDirectReward(2, 0, 0, 'nada')
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('throws 400 when coins is negative', async () => {
+    await expect(
+      economyService.applyDirectReward(2, -5, 0, 'negativo')
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('calls pokemonService.addXpToActive when xp > 0', async () => {
+    const profile = makeProfile(0, 0);
+    MockProfile.findOne.mockResolvedValue(profile);
+    MockTransaction.create.mockResolvedValue({});
+    const { pokemonService } = require('../../src/services/pokemon.service');
+
+    await economyService.applyDirectReward(2, 0, 50, 'xp bonus');
+
+    expect(pokemonService.addXpToActive).toHaveBeenCalledWith(2, 50);
+  });
+
+  it('does NOT call pokemonService.addXpToActive when xp = 0', async () => {
+    const profile = makeProfile(100, 0);
+    MockProfile.findOne.mockResolvedValue(profile);
+    MockTransaction.create.mockResolvedValue({});
+    const { pokemonService } = require('../../src/services/pokemon.service');
+    jest.clearAllMocks();
+    MockProfile.findOne.mockResolvedValue(profile);
+    MockTransaction.create.mockResolvedValue({});
+
+    await economyService.applyDirectReward(2, 10, 0, 'solo monedas');
+    expect(pokemonService.addXpToActive).not.toHaveBeenCalled();
+  });
+});

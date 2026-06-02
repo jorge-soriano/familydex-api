@@ -68,4 +68,29 @@ export const economyController = {
       res.status(200).json({ message: 'Penalización aplicada' });
     } catch (err) { next(err); }
   },
+
+  // POST /api/economy/direct-reward (admin) — coins/XP without creating a Task
+  async directReward(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { childId, coins, xp, reason } = req.body as {
+        childId: number; coins: number; xp: number; reason: string;
+      };
+
+      if (!childId || reason === undefined || reason === '') {
+        res.status(400).json({ message: 'childId y reason son obligatorios' }); return;
+      }
+      if (Number(coins) < 0 || Number(xp) < 0) {
+        res.status(400).json({ message: 'coins y xp deben ser >= 0' }); return;
+      }
+      if (Number(coins) === 0 && Number(xp) === 0) {
+        res.status(400).json({ message: 'Al menos coins o xp deben ser > 0' }); return;
+      }
+
+      await economyService.assertChildInFamily(Number(childId), req.user!.familyId);
+      const result = await economyService.applyDirectReward(
+        Number(childId), Number(coins), Number(xp), reason
+      );
+      res.status(200).json({ message: 'Recompensa directa aplicada', ...result });
+    } catch (err) { next(err); }
+  },
 };
