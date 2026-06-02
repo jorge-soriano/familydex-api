@@ -113,4 +113,43 @@ export const economyService = {
     });
     if (!user) throw new AppError(403, 'Hijo no pertenece a esta familia');
   },
+
+  /**
+   * Awards coins and/or XP directly to a child without creating a Task.
+   * Use case: "Buen comportamiento en el médico: +10 monedas y +50 XP."
+   * At least one of coins or xp must be > 0.
+   */
+  async applyDirectReward(
+    childUserId: number,
+    coins: number,
+    xp: number,
+    reason: string
+  ): Promise<{ evolutionResult?: EvoResult }> {
+    if (coins < 0 || xp < 0) {
+      throw new AppError(400, 'Las recompensas no pueden ser negativas');
+    }
+    if (coins === 0 && xp === 0) {
+      throw new AppError(400, 'Al menos monedas o XP deben ser mayores que 0');
+    }
+
+    const profile = await ChildProfile.findOne({ where: { userId: childUserId } });
+    if (!profile) throw new AppError(404, 'Perfil de hijo no encontrado');
+
+    await profile.update({ coins: profile.coins + coins, xp: profile.xp + xp });
+
+    await Transaction.create({
+      childId: childUserId,
+      type: 'DirectReward',
+      coinsDelta: coins,
+      xpDelta: xp,
+      description: reason,
+    });
+
+    let evolutionResult: EvoResult | undefined;
+    if (xp > 0) {
+      evolutionResult = (await pokemonService.addXpToActive(childUserId, xp)) ?? undefined;
+    }
+
+    return evolutionResult ? { evolutionResult } : {};
+  },
 };

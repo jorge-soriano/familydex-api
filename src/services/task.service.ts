@@ -4,6 +4,16 @@ import { TaskSeries, TaskType, TaskFrequency } from '../models/taskSeries.model'
 import { User } from '../models/user.model';
 import { AppError } from '../middlewares/errorHandler.middleware';
 import { economyService } from './economy.service';
+import type { EvoResult } from './pokemon.service';
+
+export interface CreateCompletedTaskDto {
+  childId: number;
+  title: string;
+  description?: string;
+  type: TaskType;
+  coinsReward: number;
+  xpReward: number;
+}
 
 export interface CreateTaskDto {
   assignedTo: number;
@@ -201,5 +211,45 @@ export const taskService = {
     }
 
     return created;
+  },
+
+  /**
+   * Registers an already-completed achievement on behalf of the child.
+   * Creates a Task with status=Approved and immediately awards coins/XP.
+   * Use case: "El niño sacó un notable — quiero darle XP sin que él lo marque."
+   */
+  async createCompletedTaskByAdmin(
+    dto: CreateCompletedTaskDto,
+    adminFamilyId: string
+  ): Promise<{ task: Task; evolutionResult?: EvoResult }> {
+    if (dto.coinsReward < 0 || dto.xpReward < 0) {
+      throw new AppError(400, 'Las recompensas no pueden ser negativas');
+    }
+
+    const child = await User.findOne({
+      where: { id: dto.childId, familyId: adminFamilyId, role: 'child', isActive: true },
+    });
+    if (!child) throw new AppError(404, 'Hijo no encontrado en esta familia');
+
+    const task = await Task.create({
+      familyId: adminFamilyId,
+      assignedTo: dto.childId,
+      title: dto.title,
+      description: dto.description ?? null,
+      type: dto.type,
+      coinsReward: dto.coinsReward,
+      xpReward: dto.xpReward,
+      status: 'Approved',
+    });
+
+    const result = await economyService.addCoinsAndXp(
+      dto.childId,
+      dto.coinsReward,
+      dto.xpReward,
+      `Logro registrado: ${dto.title}`,
+      task.id
+    );
+
+    return { task, ...result };
   },
 };

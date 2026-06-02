@@ -8,12 +8,11 @@ import { Pokemon } from './pokemon.model';
 import { CaughtPokemon } from './caughtPokemon.model';
 import { Reward } from './reward.model';
 import { RewardRequest } from './rewardRequest.model';
+import { TaskTemplate } from './taskTemplate.model';
 
-// ── Épica 1 ───────────────────────────────────────────────────────────────────
 User.hasOne(ChildProfile,  { foreignKey: 'userId',    as: 'childProfile' });
 ChildProfile.belongsTo(User, { foreignKey: 'userId',  as: 'user' });
 
-// ── Épica 2 ───────────────────────────────────────────────────────────────────
 User.hasMany(Task,          { foreignKey: 'assignedTo', as: 'tasks' });
 Task.belongsTo(User,        { foreignKey: 'assignedTo', as: 'assignedUser' });
 TaskSeries.hasMany(Task,    { foreignKey: 'seriesId',   as: 'instances' });
@@ -23,13 +22,11 @@ Transaction.belongsTo(User, { foreignKey: 'childId',    as: 'child' });
 Task.hasMany(Transaction,   { foreignKey: 'taskId',     as: 'transactions' });
 Transaction.belongsTo(Task, { foreignKey: 'taskId',     as: 'task' });
 
-// ── Épica 4 ───────────────────────────────────────────────────────────────────
 User.hasMany(CaughtPokemon,    { foreignKey: 'childId',   as: 'caughtPokemon' });
 CaughtPokemon.belongsTo(User,  { foreignKey: 'childId',   as: 'child' });
 Pokemon.hasMany(CaughtPokemon, { foreignKey: 'pokemonId', as: 'caughtInstances' });
 CaughtPokemon.belongsTo(Pokemon, { foreignKey: 'pokemonId', as: 'pokemon' });
 
-// ── Épica 5 ───────────────────────────────────────────────────────────────────
 Reward.hasMany(RewardRequest,        { foreignKey: 'rewardId', as: 'requests' });
 RewardRequest.belongsTo(Reward,      { foreignKey: 'rewardId', as: 'reward' });
 User.hasMany(RewardRequest,          { foreignKey: 'childId',  as: 'rewardRequests' });
@@ -37,7 +34,9 @@ RewardRequest.belongsTo(User,        { foreignKey: 'childId',  as: 'child' });
 RewardRequest.hasMany(Transaction,   { foreignKey: 'rewardRequestId', as: 'transactions' });
 Transaction.belongsTo(RewardRequest, { foreignKey: 'rewardRequestId', as: 'rewardRequest' });
 
+// TaskTemplate belongs to a family (identified by familyId UUID, no separate FK table)
+
 export {
   sequelize, User, ChildProfile, TaskSeries, Task, Transaction,
-  Pokemon, CaughtPokemon, Reward, RewardRequest,
+  Pokemon, CaughtPokemon, Reward, RewardRequest, TaskTemplate,
 };
