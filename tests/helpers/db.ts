@@ -11,22 +11,22 @@ const umzug = new Umzug({
   logger: undefined,
 });
 
-/** Applies all pending migrations (idempotent). */
 export async function migrateUp(): Promise<void> {
   await umzug.up();
 }
 
-/** Rolls back all migrations — leaves an empty schema. */
 export async function migrateDown(): Promise<void> {
   await umzug.down({ to: 0 });
 }
 
 /**
  * Truncates all application tables and resets sequences.
- * Update this list each time a new migration adds a table.
+ * Tables listed in reverse FK dependency order; CASCADE handles the rest.
+ * Update this list each time a new epic adds tables.
  */
 export async function clearAll(): Promise<void> {
   await sequelize.query(
-    'TRUNCATE TABLE child_profiles, users RESTART IDENTITY CASCADE'
+    `TRUNCATE TABLE transactions, tasks, task_series, child_profiles, users
+     RESTART IDENTITY CASCADE`
   );
 }
