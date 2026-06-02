@@ -154,15 +154,19 @@ export const pokemonService = {
    * HU-20
    */
   async getAvailableToCapture(childId: number): Promise<Pokemon[]> {
+    const profile = await ChildProfile.findOne({ where: { userId: childId } });
+    if (!profile) return [];
+
     const alreadyCaught = await CaughtPokemon.findAll({
       where: { childId },
       attributes: ['pokemonId'],
     });
     const caughtIds = alreadyCaught.map((c) => c.pokemonId);
 
+    // unlockXp >= 0 includes starters not chosen; <= profile.xp limits to what's reachable
     return Pokemon.findAll({
       where: {
-        unlockXp: { [Op.gt]: 0 },
+        unlockXp: { [Op.gte]: 0, [Op.lte]: profile.xp },
         ...(caughtIds.length ? { id: { [Op.notIn]: caughtIds } } : {}),
       },
       order: [['unlockXp', 'ASC']],
@@ -182,9 +186,7 @@ export const pokemonService = {
     }
 
     const pokemon = await Pokemon.findByPk(pokemonId);
-    if (!pokemon || pokemon.unlockXp === 0) {
-      throw new AppError(400, 'Este Pokémon no está disponible para captura');
-    }
+    if (!pokemon) throw new AppError(400, 'Pokémon no encontrado');
     if (pokemon.unlockXp > profile.xp) {
       throw new AppError(400, 'No tienes suficiente XP para capturar este Pokémon');
     }
