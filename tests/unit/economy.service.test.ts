@@ -13,6 +13,12 @@ jest.mock('../../src/models/transaction.model', () => ({
 jest.mock('../../src/models/user.model', () => ({
   User: { findAll: jest.fn(), findOne: jest.fn() },
 }));
+jest.mock('../../src/models/caughtPokemon.model', () => ({
+  CaughtPokemon: { count: jest.fn().mockResolvedValue(1) },
+}));
+jest.mock('../../src/services/pokemon.service', () => ({
+  pokemonService: { addXpToActive: jest.fn().mockResolvedValue(null) },
+}));
 
 const MockProfile     = ChildProfile as unknown as { findOne: jest.Mock };
 const MockTransaction = Transaction  as unknown as { create: jest.Mock; findAll: jest.Mock };
@@ -104,14 +110,14 @@ describe('economyService.getBalance', () => {
     expect(balance).toMatchObject({
       coins: 200,
       xp: 12500,
-      maxPokemon: 2,   // floor(12500 / 5000)
+      maxPokemon: 3,   // 1 (starter slot) + floor(12500 / 5000) = 1 + 2
     });
   });
 
-  it('maxPokemon is 0 when xp < 5000', async () => {
+  it('maxPokemon is 1 (starter slot) when xp < 5000', async () => {
     MockProfile.findOne.mockResolvedValue(makeProfile(0, 4999));
     const balance = await economyService.getBalance(2);
-    expect(balance.maxPokemon).toBe(0);
+    expect(balance.maxPokemon).toBe(1); // always at least 1 (starter slot)
   });
 
   it('throws 404 when profile not found', async () => {
