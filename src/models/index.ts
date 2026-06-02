@@ -6,6 +6,8 @@ import { Task } from './task.model';
 import { Transaction } from './transaction.model';
 import { Pokemon } from './pokemon.model';
 import { CaughtPokemon } from './caughtPokemon.model';
+import { Reward } from './reward.model';
+import { RewardRequest } from './rewardRequest.model';
 
 // ── Épica 1 ───────────────────────────────────────────────────────────────────
 User.hasOne(ChildProfile,  { foreignKey: 'userId',    as: 'childProfile' });
@@ -27,6 +29,15 @@ CaughtPokemon.belongsTo(User,  { foreignKey: 'childId',   as: 'child' });
 Pokemon.hasMany(CaughtPokemon, { foreignKey: 'pokemonId', as: 'caughtInstances' });
 CaughtPokemon.belongsTo(Pokemon, { foreignKey: 'pokemonId', as: 'pokemon' });
 
-// ── Épica 5: Reward, RewardRequest ────────────────────────────────────────────
+// ── Épica 5 ───────────────────────────────────────────────────────────────────
+Reward.hasMany(RewardRequest,        { foreignKey: 'rewardId', as: 'requests' });
+RewardRequest.belongsTo(Reward,      { foreignKey: 'rewardId', as: 'reward' });
+User.hasMany(RewardRequest,          { foreignKey: 'childId',  as: 'rewardRequests' });
+RewardRequest.belongsTo(User,        { foreignKey: 'childId',  as: 'child' });
+RewardRequest.hasMany(Transaction,   { foreignKey: 'rewardRequestId', as: 'transactions' });
+Transaction.belongsTo(RewardRequest, { foreignKey: 'rewardRequestId', as: 'rewardRequest' });
 
-export { sequelize, User, ChildProfile, TaskSeries, Task, Transaction, Pokemon, CaughtPokemon };
+export {
+  sequelize, User, ChildProfile, TaskSeries, Task, Transaction,
+  Pokemon, CaughtPokemon, Reward, RewardRequest,
+};
