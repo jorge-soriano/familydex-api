@@ -1,7 +1,7 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import { sequelize } from '../config/database';
 
-export type TransactionType = 'TaskReward' | 'Penalty' | 'RewardRedeemed' | 'DirectReward';
+export type TransactionType = 'TaskReward' | 'Penalty' | 'RewardRedeemed' | 'DirectReward' | 'DirectRecord';
 
 interface TransactionAttributes {
   id: number;
@@ -42,7 +42,7 @@ Transaction.init(
     childId:         { type: DataTypes.INTEGER, allowNull: false },
     taskId:          { type: DataTypes.INTEGER, allowNull: true },
     rewardRequestId: { type: DataTypes.INTEGER, allowNull: true },
-    type:            { type: DataTypes.ENUM('TaskReward','Penalty','RewardRedeemed','DirectReward'), allowNull: false },
+    type:            { type: DataTypes.ENUM('TaskReward','Penalty','RewardRedeemed','DirectReward','DirectRecord'), allowNull: false },
     coinsDelta:      { type: DataTypes.INTEGER, allowNull: false },
     xpDelta:         { type: DataTypes.INTEGER, allowNull: false },
     description:     { type: DataTypes.TEXT, allowNull: false },

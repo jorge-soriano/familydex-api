@@ -11,15 +11,16 @@ interface TaskTemplateAttributes {
   coinsReward: number;
   xpReward: number;
   isActive: boolean;
-  category: string | null;   // reserved for future variant/grouping
-  sortOrder: number | null;  // reserved for ordering within category
+  category: string | null;
+  sortOrder: number | null;
+  isRecordPreset: boolean;   // preset for direct-records form (not a task template)
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 type TaskTemplateCreationAttributes = Optional<
   TaskTemplateAttributes,
-  'id' | 'description' | 'isActive' | 'category' | 'sortOrder'
+  'id' | 'description' | 'isActive' | 'category' | 'sortOrder' | 'isRecordPreset'
 >;
 
 export class TaskTemplate
@@ -36,6 +37,7 @@ export class TaskTemplate
   declare isActive: boolean;
   declare category: string | null;
   declare sortOrder: number | null;
+  declare isRecordPreset: boolean;
   declare readonly createdAt: Date;
   declare readonly updatedAt: Date;
 }
@@ -51,7 +53,8 @@ TaskTemplate.init(
     xpReward:    { type: DataTypes.INTEGER, defaultValue: 0 },
     isActive:    { type: DataTypes.BOOLEAN, defaultValue: true },
     category:    { type: DataTypes.STRING(100), allowNull: true },
-    sortOrder:   { type: DataTypes.INTEGER, allowNull: true },
+    sortOrder:      { type: DataTypes.INTEGER, allowNull: true },
+    isRecordPreset: { type: DataTypes.BOOLEAN, defaultValue: false },
   },
   { sequelize, tableName: 'task_templates', modelName: 'TaskTemplate', underscored: true }
 );
