@@ -7,6 +7,7 @@ const router = Router();
 
 router.use(authenticate);
 
+router.get('/catalog',        pokemonController.getCatalog);           // Pokédex completa
 router.get('/starters',       pokemonController.getStarters);          // pre-onboarding
 router.post('/choose-initial', requireChild, pokemonController.chooseInitial); // HU-17
 router.get('/',                pokemonController.getCollection);        // HU-18/21 (child + admin)

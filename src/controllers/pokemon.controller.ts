@@ -1,7 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
 import { pokemonService } from '../services/pokemon.service';
+import { Pokemon } from '../models/pokemon.model';
 
 export const pokemonController = {
+  // GET /api/pokemon/catalog — full catalog ordered by pokedexNumber
+  async getCatalog(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const catalog = await Pokemon.findAll({ order: [['pokedexNumber', 'ASC']] });
+      res.json(catalog);
+    } catch (err) { next(err); }
+  },
+
   // GET /api/pokemon/starters — initial choices for onboarding (HU-17)
   async getStarters(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
