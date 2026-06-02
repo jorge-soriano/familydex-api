@@ -45,11 +45,13 @@ export const rewardController = {
     } catch (err) { next(err); }
   },
 
-  // GET /api/rewards/requests — admin: all family; child: own
+  // GET /api/rewards/requests — admin: all family (or ?childId=X); child: own
   async getRequests(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { status } = req.query as Record<string, string>;
-      const childId = req.user!.role === 'child' ? req.user!.userId : undefined;
+      const { status, childId: qChildId } = req.query as Record<string, string>;
+      const childId = req.user!.role === 'child'
+        ? req.user!.userId
+        : (qChildId ? Number(qChildId) : undefined);
       const requests = await rewardService.getRequests({
         familyId: req.user!.familyId, childId, status,
       });
