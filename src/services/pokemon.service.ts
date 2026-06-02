@@ -147,10 +147,13 @@ export const pokemonService = {
   },
 
   /** Pokémon available for capture (unlockXp > 0, unlockXp ≤ child.xp, not yet caught). HU-20 */
+  /**
+   * Returns ALL capturable pokemon (unlockXp > 0) not yet owned by the child,
+   * ordered by unlockXp. Includes locked ones — the frontend distinguishes
+   * available vs locked using the child's current XP from the balance.
+   * HU-20
+   */
   async getAvailableToCapture(childId: number): Promise<Pokemon[]> {
-    const profile = await ChildProfile.findOne({ where: { userId: childId } });
-    if (!profile) return [];
-
     const alreadyCaught = await CaughtPokemon.findAll({
       where: { childId },
       attributes: ['pokemonId'],
@@ -159,7 +162,7 @@ export const pokemonService = {
 
     return Pokemon.findAll({
       where: {
-        unlockXp: { [Op.gt]: 0, [Op.lte]: profile.xp },
+        unlockXp: { [Op.gt]: 0 },
         ...(caughtIds.length ? { id: { [Op.notIn]: caughtIds } } : {}),
       },
       order: [['unlockXp', 'ASC']],
