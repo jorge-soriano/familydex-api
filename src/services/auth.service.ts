@@ -5,6 +5,7 @@ import { User } from '../models/user.model';
 import { ChildProfile } from '../models/childProfile.model';
 import { jwtConfig } from '../config/jwt';
 import { AppError } from '../middlewares/errorHandler.middleware';
+import { securityLog } from '../config/logger';
 
 const SALT_ROUNDS = 10;
 
@@ -88,12 +89,18 @@ export const authService = {
     }
 
     if (!user || !user.isActive) {
+      // OWASP A09: log failed attempts — generic message prevents user enumeration
+      securityLog.loginFailed(dto.identifier);
       throw new AppError(401, 'Credenciales incorrectas');
     }
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!valid) throw new AppError(401, 'Credenciales incorrectas');
+    if (!valid) {
+      securityLog.loginFailed(dto.identifier);
+      throw new AppError(401, 'Credenciales incorrectas');
+    }
 
+    securityLog.loginSuccess(user.id);
     return signToken(user);
   },
 };

@@ -3,18 +3,26 @@ import { authService } from '../services/auth.service';
 import { User } from '../models/user.model';
 import { ChildProfile } from '../models/childProfile.model';
 
+// OWASP A03: Input validation — length limits prevent oversized payloads
+// bypassing DB-level constraints and help detect injection probing.
 function validateRegister(body: Record<string, unknown>): string | null {
   const { email, password, confirmPassword, username } = body;
   if (!email || !password || !username)
     return 'Faltan campos obligatorios';
+  if (String(email).length > 254)
+    return 'El email es demasiado largo';
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email)))
     return 'Formato de email inválido';
+  if (String(username).length > 50)
+    return 'El nombre de usuario no puede superar 50 caracteres';
   if (
     String(password).length < 8 ||
     !/[A-Z]/.test(String(password)) ||
     !/\d/.test(String(password))
   )
     return 'La contraseña debe tener mínimo 8 caracteres, una mayúscula y un número';
+  if (String(password).length > 128)
+    return 'La contraseña no puede superar 128 caracteres';
   if (password !== confirmPassword)
     return 'Las contraseñas no coinciden';
   return null;
@@ -26,8 +34,12 @@ function validateCreateChild(body: Record<string, unknown>): string | null {
     return 'Faltan campos obligatorios';
   if (String(displayName).length < 2)
     return 'El nombre debe tener al menos 2 caracteres';
+  if (String(displayName).length > 100)
+    return 'El nombre no puede superar 100 caracteres';
   if (/\s/.test(String(username)))
     return 'El nombre de usuario no puede contener espacios';
+  if (String(username).length > 50)
+    return 'El nombre de usuario no puede superar 50 caracteres';
   return null;
 }
 
