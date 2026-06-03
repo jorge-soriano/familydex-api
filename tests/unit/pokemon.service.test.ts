@@ -67,40 +67,28 @@ describe('pokemonService.chooseInitial', () => {
   });
 });
 
-// ── addXpToActive ─────────────────────────────────────────────────────────────
+// ── addXpToActive — no longer auto-evolves ────────────────────────────────────
 describe('pokemonService.addXpToActive', () => {
-  it('adds XP to active CaughtPokemon', async () => {
-    const caught = { ...fakeCaught({ pokemonXp: 10 }), pokemon: fakePokemon({ evolvesAtLevel: null }) };
+  it('updates pokemonXp on active pokemon', async () => {
+    const caught = fakeCaught({ pokemonXp: 100, pokemon: fakePokemon({ evolvesAtLevel: 16 }) });
     MockCaught.findOne.mockResolvedValue(caught);
-
     await pokemonService.addXpToActive(2, 50);
-    expect(caught.update).toHaveBeenCalledWith({ pokemonXp: 60 });
+    expect(caught.update).toHaveBeenCalledWith({ pokemonXp: 150 });
   });
 
-  it('triggers evolution when level reaches evolvesAtLevel', async () => {
-    // 16^3 = 4096, so at 4096 XP the pokemon reaches level 16
-    const caught = {
-      ...fakeCaught({ pokemonXp: 4095 }),
-      pokemon: fakePokemon({ evolvesAtLevel: 16, evolvesToPokedexNumber: 5 }),
-    };
+  it('does NOT auto-evolve even when level threshold reached', async () => {
+    // 4096 XP = level 16, evolvesAtLevel=16 — should NOT call evolve anymore
+    const caught = fakeCaught({ pokemonXp: 4000, pokemon: fakePokemon({ evolvesAtLevel: 16 }) });
     MockCaught.findOne.mockResolvedValue(caught);
-    MockCaught.findByPk.mockResolvedValue({
-      ...caught,
-      update: jest.fn().mockResolvedValue(undefined),
-    });
-    const nextForm = fakePokemon({ id: 2, pokedexNumber: 5, name: 'Charmeleon' });
-    MockPokemon.findOne.mockResolvedValue(nextForm);
-    MockCaught.create.mockResolvedValue({});
-
-    const result = await pokemonService.addXpToActive(2, 1); // 4095+1=4096, level=16
-    expect(result).not.toBeNull();
-    expect(result!.evolvedTo.name).toBe('Charmeleon');
+    const evolveSpy = jest.spyOn(pokemonService as any, 'evolve');
+    await pokemonService.addXpToActive(2, 200); // pushes to 4200 → level 16
+    expect(evolveSpy).not.toHaveBeenCalled();
+    evolveSpy.mockRestore();
   });
 
-  it('returns null when child has no active Pokémon', async () => {
+  it('returns without error when child has no active pokemon', async () => {
     MockCaught.findOne.mockResolvedValue(null);
-    const result = await pokemonService.addXpToActive(2, 50);
-    expect(result).toBeNull();
+    await expect(pokemonService.addXpToActive(2, 100)).resolves.toBeUndefined();
   });
 });
 
@@ -121,6 +109,48 @@ describe('pokemonService.evolve', () => {
     expect(MockCaught.create).toHaveBeenCalledWith(
       expect.objectContaining({ pokemonId: 2, isActive: true, pokemonXp: 500 })
     );
+  });
+});
+
+// ── evolveActive ───────────────────────────────────────────────────────────────
+describe('pokemonService.evolveActive', () => {
+  it('throws 404 when no active pokemon', async () => {
+    MockCaught.findOne.mockResolvedValue(null);
+    await expect(pokemonService.evolveActive(2)).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('throws 400 when pokemon not ready to evolve (XP too low)', async () => {
+    const caught = fakeCaught({ pokemonXp: 100, pokemon: fakePokemon({ evolvesAtLevel: 16 }) });
+    MockCaught.findOne.mockResolvedValue(caught);
+    await expect(pokemonService.evolveActive(2)).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('throws 400 when pokemon has no evolution (evolvesAtLevel is null)', async () => {
+    const caught = fakeCaught({
+      pokemonXp: 5000,
+      pokemon: fakePokemon({ evolvesAtLevel: null, evolvesToPokedexNumber: null }),
+    });
+    MockCaught.findOne.mockResolvedValue(caught);
+    await expect(pokemonService.evolveActive(2)).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('evolves successfully when level threshold is met', async () => {
+    // 4096 XP = level 16, evolvesAtLevel=16 — ready to evolve
+    const caught = fakeCaught({
+      pokemonXp: 4096,
+      pokemon: fakePokemon({ evolvesAtLevel: 16, evolvesToPokedexNumber: 5 }),
+    });
+    MockCaught.findOne.mockResolvedValue(caught);
+    MockCaught.findByPk.mockResolvedValue({
+      ...caught,
+      update: jest.fn().mockResolvedValue(undefined),
+    });
+    const nextForm = fakePokemon({ id: 2, pokedexNumber: 5, name: 'Charmeleon' });
+    MockPokemon.findOne.mockResolvedValue(nextForm);
+    MockCaught.create.mockResolvedValue({});
+
+    const result = await pokemonService.evolveActive(2);
+    expect(result.evolvedTo.name).toBe('Charmeleon');
   });
 });
 

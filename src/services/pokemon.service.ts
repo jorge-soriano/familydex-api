@@ -24,6 +24,7 @@ export interface ActivePokemonResult extends CollectionItem {
   progressPercent: number;
   isFinalForm: boolean;
   evolveLevel: number | null;
+  readyToEvolve: boolean;
 }
 
 export function calcLevel(pokemonXp: number): number {
@@ -81,6 +82,7 @@ export const pokemonService = {
       progressPercent: Math.min(100, Math.max(0, progressPercent)),
       isFinalForm: !pokemon.evolvesToPokedexNumber,
       evolveLevel: pokemon.evolvesAtLevel,
+      readyToEvolve: !!(pokemon.evolvesAtLevel && calcLevel(caught.pokemonXp) >= pokemon.evolvesAtLevel),
     };
   },
 
@@ -99,24 +101,16 @@ export const pokemonService = {
   },
 
   /**
-   * Adds XP to the active Pokémon. Triggers evolution if level threshold reached.
+   * Adds XP to the active Pokémon. No longer auto-evolves — evolution is manual.
    * Called by activityService.addCoinsAndXp. HU-19
    */
-  async addXpToActive(childId: number, xp: number): Promise<EvoResult | null> {
+  async addXpToActive(childId: number, xp: number): Promise<void> {
     const caught = await CaughtPokemon.findOne({
       where: { childId, isActive: true },
       include: [{ model: Pokemon, as: 'pokemon' }],
     });
-    if (!caught) return null; // child hasn't done onboarding yet
-
-    const newXp = caught.pokemonXp + xp;
-    await caught.update({ pokemonXp: newXp });
-
-    const pokemon = (caught as any).pokemon as Pokemon;
-    if (pokemon.evolvesAtLevel && calcLevel(newXp) >= pokemon.evolvesAtLevel) {
-      return pokemonService.evolve(caught.id);
-    }
-    return null;
+    if (!caught) return;
+    await caught.update({ pokemonXp: caught.pokemonXp + xp });
   },
 
   /** Creates evolved CaughtPokemon, deactivates old one. HU-19 */
@@ -144,6 +138,24 @@ export const pokemonService = {
     });
 
     return { evolvedTo: nextForm, trigger: current.evolutionTrigger };
+  },
+
+  /** Manually triggers evolution of the active Pokémon. Called from new endpoint. */
+  async evolveActive(childId: number): Promise<EvoResult> {
+    const caught = await CaughtPokemon.findOne({
+      where: { childId, isActive: true },
+      include: [{ model: Pokemon, as: 'pokemon' }],
+    });
+    if (!caught) throw new AppError(404, 'No tienes un Pokémon activo');
+
+    const pokemon = (caught as any).pokemon as Pokemon;
+    if (!pokemon.evolvesAtLevel || calcLevel(caught.pokemonXp) < pokemon.evolvesAtLevel) {
+      throw new AppError(400, 'Tu Pokémon aún no está listo para evolucionar');
+    }
+
+    const result = await pokemonService.evolve(caught.id);
+    if (!result) throw new AppError(400, 'No se pudo evolucionar este Pokémon');
+    return result;
   },
 
   /** Pokémon available for capture (unlockXp > 0, unlockXp ≤ child.xp, not yet caught). HU-20 */

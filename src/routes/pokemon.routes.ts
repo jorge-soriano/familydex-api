@@ -14,5 +14,6 @@ router.get('/',                pokemonController.getCollection);        // HU-18
 router.get('/available',       requireChild, pokemonController.getAvailable);  // HU-20
 router.post('/capture',        requireChild, pokemonController.capture);       // HU-20
 router.put('/active',          requireChild, pokemonController.setActive);     // HU-21
+router.post('/active/evolve',  requireChild, pokemonController.evolveActive);   // manual evolution
 
 export default router;

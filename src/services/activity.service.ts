@@ -5,7 +5,7 @@ import { User } from '../models/user.model';
 import { CaughtPokemon } from '../models/caughtPokemon.model';
 import { Pokemon } from '../models/pokemon.model';
 import { AppError } from '../middlewares/errorHandler.middleware';
-import { pokemonService, EvoResult } from './pokemon.service';
+import { pokemonService } from './pokemon.service';
 
 export interface BalanceResult {
   coins: number;
@@ -29,7 +29,7 @@ export const activityService = {
     xp: number,
     description: string,
     taskId?: number
-  ): Promise<{ evolutionResult?: EvoResult }> {
+  ): Promise<object> {
     const profile = await ChildProfile.findOne({ where: { userId: childUserId } });
     if (!profile) throw new AppError(404, 'Perfil de hijo no encontrado');
 
@@ -40,8 +40,8 @@ export const activityService = {
       type: 'TaskReward', coinsDelta: coins, xpDelta: xp, description,
     });
 
-    const evolutionResult = await pokemonService.addXpToActive(childUserId, xp);
-    return evolutionResult ? { evolutionResult } : {};
+    await pokemonService.addXpToActive(childUserId, xp);
+    return {};
   },
 
 
