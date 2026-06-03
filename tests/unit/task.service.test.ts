@@ -144,9 +144,11 @@ describe('taskService.deleteTask', () => {
     expect(task.destroy).toHaveBeenCalled();
   });
 
-  it('throws 400 when trying to delete an Approved task', async () => {
+  it('admin can delete any task including Approved ones', async () => {
     MockTask.findOne.mockResolvedValue(makeTask({ status: 'Approved' }));
-    await expect(taskService.deleteTask(1, FAMILY)).rejects.toMatchObject({ status: 400 });
+    const task = makeTask({ status: 'Approved' });
+    MockTask.findOne.mockResolvedValue(task);
+    await expect(taskService.deleteTask(1, FAMILY)).resolves.toBeUndefined();
   });
 });
 
@@ -207,6 +209,69 @@ describe('taskService.createTask (single — multi-assign is handled in controll
     expect(task).toBeDefined();
     expect(MockTask.create).toHaveBeenCalledWith(
       expect.objectContaining({ assignedTo: 3, familyId: FAMILY })
+    );
+  });
+});
+
+// ── directApprove ─────────────────────────────────────────────────────────────
+describe('taskService.directApprove', () => {
+  it('approves a Pending task and calls economyService', async () => {
+    const task = makeTask({ status: 'Pending', coinsReward: 10, xpReward: 50, assignedTo: 2 });
+    MockTask.findOne.mockResolvedValue(task);
+    MockEconomy.addCoinsAndXp.mockResolvedValue({});
+
+    await taskService.directApprove(1, FAMILY);
+    expect(task.update).toHaveBeenCalledWith({ status: 'Approved' });
+    expect(MockEconomy.addCoinsAndXp).toHaveBeenCalledWith(2, 10, 50, expect.any(String), 1);
+  });
+
+  it('also approves InReview tasks', async () => {
+    const task = makeTask({ status: 'InReview', assignedTo: 2 });
+    MockTask.findOne.mockResolvedValue(task);
+    MockEconomy.addCoinsAndXp.mockResolvedValue({});
+
+    await taskService.directApprove(1, FAMILY);
+    expect(task.update).toHaveBeenCalledWith({ status: 'Approved' });
+  });
+
+  it('throws 400 when already Approved', async () => {
+    MockTask.findOne.mockResolvedValue(makeTask({ status: 'Approved' }));
+    await expect(taskService.directApprove(1, FAMILY)).rejects.toMatchObject({ status: 400 });
+  });
+});
+
+// ── toggleEnabled ─────────────────────────────────────────────────────────────
+describe('taskService.toggleEnabled', () => {
+  it('disables an enabled task', async () => {
+    const task = makeTask({ isEnabled: true, seriesId: null });
+    MockTask.findOne.mockResolvedValue(task);
+
+    const result = await taskService.toggleEnabled(1, FAMILY);
+    expect(task.update).toHaveBeenCalledWith({ isEnabled: false });
+    expect(result.isEnabled).toBe(false);
+  });
+
+  it('re-enables a disabled task', async () => {
+    const task = makeTask({ isEnabled: false, seriesId: null });
+    MockTask.findOne.mockResolvedValue(task);
+
+    const result = await taskService.toggleEnabled(1, FAMILY);
+    expect(task.update).toHaveBeenCalledWith({ isEnabled: true });
+    expect(result.isEnabled).toBe(true);
+  });
+
+  it('for recurring tasks toggles the series and all pending instances', async () => {
+    const task = makeTask({ isEnabled: true, seriesId: 5 });
+    MockTask.findOne.mockResolvedValue(task);
+    MockTaskSeries.update.mockResolvedValue([1]);
+    MockTask.update.mockResolvedValue([2]);
+
+    await taskService.toggleEnabled(1, FAMILY);
+    expect(MockTaskSeries.update).toHaveBeenCalledWith(
+      { isActive: false }, expect.objectContaining({ where: { id: 5 } })
+    );
+    expect(MockTask.update).toHaveBeenCalledWith(
+      { isEnabled: false }, expect.objectContaining({ where: expect.objectContaining({ seriesId: 5 }) })
     );
   });
 });

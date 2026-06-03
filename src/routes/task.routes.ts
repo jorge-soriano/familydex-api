@@ -13,8 +13,10 @@ router.post('/',      requireAdmin, taskController.createTask);
 router.put('/:id',    requireAdmin, taskController.editTask);
 router.delete('/:id', requireAdmin, taskController.deleteTask);
 
-router.post('/quick-complete', requireAdmin, taskController.quickComplete); // before /:id routes
-router.post('/:id/complete', requireChild, taskController.completeTask);
+router.post('/quick-complete',       requireAdmin, taskController.quickComplete);
+router.post('/:id/direct-approve',   requireAdmin, taskController.directApprove);
+router.patch('/:id/enabled',         requireAdmin, taskController.toggleEnabled);
+router.post('/:id/complete',         requireChild, taskController.completeTask);
 router.post('/:id/approve',  requireAdmin, taskController.approveTask);
 router.post('/:id/reject',   requireAdmin, taskController.rejectTask);
 

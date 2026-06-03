@@ -13,6 +13,7 @@ export const taskController = {
           : (assignedTo ? Number(assignedTo) : undefined),
         status: status as TaskStatus | undefined,
         type: type as TaskType | undefined,
+        onlyEnabled: req.user!.role === 'child', // child only sees enabled tasks
       };
       const tasks = await taskService.getTasks(filters, req.user!.familyId);
       res.json(tasks);
@@ -90,6 +91,22 @@ export const taskController = {
         Number(req.params.id), reason ?? null, req.user!.familyId
       );
       res.json(task);
+    } catch (err) { next(err); }
+  },
+
+  // POST /api/tasks/:id/direct-approve (admin) — approve regardless of current status
+  async directApprove(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const task = await taskService.directApprove(Number(req.params.id), req.user!.familyId);
+      res.json(task);
+    } catch (err) { next(err); }
+  },
+
+  // PATCH /api/tasks/:id/enabled (admin) — toggle isEnabled
+  async toggleEnabled(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const result = await taskService.toggleEnabled(Number(req.params.id), req.user!.familyId);
+      res.json(result);
     } catch (err) { next(err); }
   },
 

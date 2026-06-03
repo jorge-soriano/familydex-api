@@ -40,6 +40,7 @@ export interface GetTasksFilters {
   assignedTo?: number;
   status?: TaskStatus;
   type?: TaskType;
+  onlyEnabled?: boolean; // true for child queries — hides disabled tasks
 }
 
 export const taskService = {
@@ -84,7 +85,12 @@ export const taskService = {
     if (filters.assignedTo) where.assignedTo = filters.assignedTo;
     if (filters.status)     where.status = filters.status;
     if (filters.type)       where.type = filters.type;
-    return Task.findAll({ where, order: [['createdAt', 'DESC']] });
+    if (filters.onlyEnabled) where.isEnabled = true;
+    return Task.findAll({
+      where,
+      include: [{ model: TaskSeries, as: 'series', required: false }],
+      order: [['createdAt', 'DESC']],
+    });
   },
 
   async editTask(
@@ -95,9 +101,6 @@ export const taskService = {
   ): Promise<Task> {
     const task = await Task.findOne({ where: { id, familyId } });
     if (!task) throw new AppError(404, 'Tarea no encontrada');
-    if (task.status === 'Approved' || task.status === 'Rejected') {
-      throw new AppError(400, 'No se puede editar una tarea aprobada o rechazada');
-    }
 
     if (applyToSeries && task.seriesId) {
       await TaskSeries.update(dto, { where: { id: task.seriesId } });
@@ -117,9 +120,6 @@ export const taskService = {
   ): Promise<void> {
     const task = await Task.findOne({ where: { id, familyId } });
     if (!task) throw new AppError(404, 'Tarea no encontrada');
-    if (task.status === 'Approved') {
-      throw new AppError(400, 'Las tareas aprobadas no se pueden eliminar');
-    }
 
     if (deleteSeries && task.seriesId) {
       await Task.destroy({
@@ -218,6 +218,50 @@ export const taskService = {
    * Creates a Task with status=Approved and immediately awards coins/XP.
    * Use case: "El niño sacó un notable — quiero darle XP sin que él lo marque."
    */
+  /**
+   * Admin approves a task regardless of its current status (Pending or InReview).
+   * Useful when the parent wants to confirm a task without waiting for the child.
+   */
+  async directApprove(id: number, familyId: string): Promise<Task> {
+    const task = await Task.findOne({ where: { id, familyId } });
+    if (!task) throw new AppError(404, 'Tarea no encontrada');
+    if (task.status === 'Approved') throw new AppError(400, 'La tarea ya está aprobada');
+
+    await task.update({ status: 'Approved' });
+    await economyService.addCoinsAndXp(
+      task.assignedTo,
+      task.coinsReward,
+      task.xpReward,
+      `Tarea aprobada: ${task.title}`,
+      task.id
+    );
+    return task;
+  },
+
+  /**
+   * Toggles isEnabled on a task.
+   * For recurring tasks: also toggles TaskSeries.isActive and all pending instances.
+   * Disabled tasks are hidden from the child's task list.
+   */
+  async toggleEnabled(id: number, familyId: string): Promise<{ isEnabled: boolean }> {
+    const task = await Task.findOne({ where: { id, familyId } });
+    if (!task) throw new AppError(404, 'Tarea no encontrada');
+
+    const newEnabled = !task.isEnabled;
+
+    if (task.seriesId) {
+      // Recurring: affect the entire series + all pending instances
+      await TaskSeries.update({ isActive: newEnabled }, { where: { id: task.seriesId } });
+      await Task.update(
+        { isEnabled: newEnabled },
+        { where: { seriesId: task.seriesId, status: { [Op.in]: ['Pending', 'InReview'] } } }
+      );
+    } else {
+      await task.update({ isEnabled: newEnabled });
+    }
+    return { isEnabled: newEnabled };
+  },
+
   async createCompletedTaskByAdmin(
     dto: CreateCompletedTaskDto,
     adminFamilyId: string

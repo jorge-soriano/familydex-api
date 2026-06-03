@@ -17,14 +17,15 @@ interface TaskAttributes {
   xpReward: number;
   status: TaskStatus;
   rejectionReason: string | null;
-  dueDate: string | null; // DATEONLY → stored as "YYYY-MM-DD"
+  dueDate: string | null;
+  isEnabled: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 type TaskCreationAttributes = Optional<
   TaskAttributes,
-  'id' | 'description' | 'seriesId' | 'status' | 'rejectionReason' | 'dueDate'
+  'id' | 'description' | 'seriesId' | 'status' | 'rejectionReason' | 'dueDate' | 'isEnabled'
 >;
 
 export class Task
@@ -43,6 +44,7 @@ export class Task
   declare status: TaskStatus;
   declare rejectionReason: string | null;
   declare dueDate: string | null;
+  declare isEnabled: boolean;
   declare readonly createdAt: Date;
   declare readonly updatedAt: Date;
 }
@@ -61,6 +63,7 @@ Task.init(
     status:          { type: DataTypes.ENUM('Pending','InReview','Approved','Rejected'), defaultValue: 'Pending' },
     rejectionReason: { type: DataTypes.TEXT, allowNull: true },
     dueDate:         { type: DataTypes.DATEONLY, allowNull: true },
+    isEnabled:       { type: DataTypes.BOOLEAN, defaultValue: true },
   },
   { sequelize, tableName: 'tasks', modelName: 'Task', underscored: true }
 );
