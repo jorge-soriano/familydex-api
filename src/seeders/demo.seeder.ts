@@ -2,18 +2,40 @@ import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
 import { User } from '../models/user.model';
 import { ChildProfile } from '../models/childProfile.model';
+import { TaskSeries } from '../models/taskSeries.model';
 import { Task } from '../models/task.model';
 import { Transaction } from '../models/transaction.model';
 import { Reward } from '../models/reward.model';
 import { RewardRequest } from '../models/rewardRequest.model';
 import { Pokemon } from '../models/pokemon.model';
 import { CaughtPokemon } from '../models/caughtPokemon.model';
+import type { TaskType, TaskFrequency } from '../models/taskSeries.model';
+import type { TaskStatus } from '../models/task.model';
 
-const DEMO_EMAIL   = 'padre@demo.com';
-const SALT_ROUNDS  = 10;
+const DEMO_EMAIL  = 'padre@demo.com';
+const SALT_ROUNDS = 10;
+
+/** Creates a daily TaskSeries + today's instance */
+async function dailyTask(
+  familyId: string,
+  assignedTo: number,
+  title: string,
+  type: TaskType,
+  coinsReward: number,
+  xpReward: number,
+  status: TaskStatus
+) {
+  const series = await TaskSeries.create({
+    familyId, assignedTo, title, type,
+    coinsReward, xpReward,
+    frequency: 'Daily' as TaskFrequency,
+    daysOfWeek: null,
+    isActive: true,
+  });
+  await Task.create({ familyId, assignedTo, seriesId: series.id, title, type, coinsReward, xpReward, status });
+}
 
 export async function seedDemo(): Promise<void> {
-  // Idempotente — no re-siembra si ya existe la familia demo
   const exists = await User.findOne({ where: { email: DEMO_EMAIL } });
   if (exists) return;
 
@@ -21,66 +43,43 @@ export async function seedDemo(): Promise<void> {
 
   // ── Admin ─────────────────────────────────────────────────────────────────
   await User.create({
-    familyId,
-    username: 'padregarcia',
-    email: DEMO_EMAIL,
+    familyId, username: 'padregarcia', email: DEMO_EMAIL,
     passwordHash: await bcrypt.hash('Demo1234', SALT_ROUNDS),
     role: 'admin',
   });
 
-  // ── Hijos ─────────────────────────────────────────────────────────────────
+  // ── Lucas (8 años) ────────────────────────────────────────────────────────
   const lucas = await User.create({
-    familyId,
-    username: 'lucas',
-    email: null,
+    familyId, username: 'lucas', email: null,
     passwordHash: await bcrypt.hash('lucas123', SALT_ROUNDS),
     role: 'child',
   });
   await ChildProfile.create({
-    userId: lucas.id,
-    displayName: 'Lucas',
-    avatarColor: '#3b82f6',
-    coins: 45,
-    xp: 11000,
+    userId: lucas.id, displayName: 'Lucas', avatarColor: '#3b82f6',
+    coins: 45, xp: 11000,
   });
 
+  // ── Sofía (5 años) ────────────────────────────────────────────────────────
   const sofia = await User.create({
-    familyId,
-    username: 'sofia',
-    email: null,
+    familyId, username: 'sofia', email: null,
     passwordHash: await bcrypt.hash('sofia123', SALT_ROUNDS),
     role: 'child',
   });
   await ChildProfile.create({
-    userId: sofia.id,
-    displayName: 'Sofía',
-    avatarColor: '#ec4899',
-    coins: 30,
-    xp: 3200,
+    userId: sofia.id, displayName: 'Sofía', avatarColor: '#ec4899',
+    coins: 30, xp: 3200,
   });
 
   // ── Pokémon ───────────────────────────────────────────────────────────────
-  // Lucas: Charmander → evolucionó a Charmeleon (nivel 18, pokemonXp 5832)
   const charmander = await Pokemon.findOne({ where: { pokedexNumber: 4 } });
   const charmeleon = await Pokemon.findOne({ where: { pokedexNumber: 5 } });
   if (charmander && charmeleon) {
-    await CaughtPokemon.create({
-      childId: lucas.id, pokemonId: charmander.id,
-      isActive: false, pokemonXp: 5832, caughtAt: new Date(),
-    });
-    await CaughtPokemon.create({
-      childId: lucas.id, pokemonId: charmeleon.id,
-      isActive: true, pokemonXp: 5832, caughtAt: new Date(),
-    });
+    await CaughtPokemon.create({ childId: lucas.id, pokemonId: charmander.id, isActive: false, pokemonXp: 5832, caughtAt: new Date() });
+    await CaughtPokemon.create({ childId: lucas.id, pokemonId: charmeleon.id, isActive: true,  pokemonXp: 5832, caughtAt: new Date() });
   }
-
-  // Sofía: Pikachu activo (nivel 15, pokemonXp 3375)
   const pikachu = await Pokemon.findOne({ where: { pokedexNumber: 25 } });
   if (pikachu) {
-    await CaughtPokemon.create({
-      childId: sofia.id, pokemonId: pikachu.id,
-      isActive: true, pokemonXp: 3375, caughtAt: new Date(),
-    });
+    await CaughtPokemon.create({ childId: sofia.id, pokemonId: pikachu.id, isActive: true, pokemonXp: 3375, caughtAt: new Date() });
   }
 
   // ── Recompensas ───────────────────────────────────────────────────────────
@@ -89,57 +88,54 @@ export async function seedDemo(): Promise<void> {
     description: 'Media hora extra de móvil, tablet o videojuegos.',
     coinCost: 20, isActive: true,
   });
-  await Reward.create({
-    familyId, name: 'Noche de película',
-    description: 'Elegir la peli del viernes y quedarse a verla.',
-    coinCost: 60, isActive: true,
-  });
-  await Reward.create({
-    familyId, name: 'Salida al parque',
-    description: 'Una tarde de juegos en el parque.',
-    coinCost: 40, isActive: true,
-  });
-  await Reward.create({
-    familyId, name: 'Videojuego 1h extra',
-    description: 'Una hora adicional de videojuegos el fin de semana.',
-    coinCost: 50, isActive: true,
-  });
+  await Reward.create({ familyId, name: 'Noche de película',    description: 'Elegir la peli del viernes y quedarse a verla.',     coinCost: 60, isActive: true });
+  await Reward.create({ familyId, name: 'Salida al parque',     description: 'Una tarde de juegos en el parque.',                   coinCost: 40, isActive: true });
+  await Reward.create({ familyId, name: 'Videojuego 1h extra',  description: 'Una hora adicional de videojuegos el fin de semana.', coinCost: 50, isActive: true });
 
-  // ── Tareas de Lucas ───────────────────────────────────────────────────────
-  const lt1 = await Task.create({ familyId, assignedTo: lucas.id, title: 'Hacer los deberes',    type: 'deberes',         coinsReward: 20, xpReward: 2500, status: 'Approved' });
-  const lt2 = await Task.create({ familyId, assignedTo: lucas.id, title: 'Recoger la habitación',type: 'hogar',           coinsReward: 25, xpReward: 3000, status: 'Approved' });
-  const lt3 = await Task.create({ familyId, assignedTo: lucas.id, title: 'Ducha sin quejarse',   type: 'responsabilidad', coinsReward: 20, xpReward: 3000, status: 'Approved' });
-  const lt4 = await Task.create({ familyId, assignedTo: lucas.id, title: 'Tender la cama',       type: 'hogar',           coinsReward: 15, xpReward: 2500, status: 'Approved' });
-  await       Task.create({ familyId, assignedTo: lucas.id, title: 'Poner la mesa',         type: 'hogar',           coinsReward: 10, xpReward:  500, status: 'InReview' });
-  await       Task.create({ familyId, assignedTo: lucas.id, title: 'Estudiar inglés',       type: 'deberes',         coinsReward: 15, xpReward: 1000, status: 'Pending',
-                             rejectionReason: 'La próxima hazlo sin distracciones.' });
-  await       Task.create({ familyId, assignedTo: lucas.id, title: 'Ordenar los juguetes',  type: 'hogar',           coinsReward:  5, xpReward:  100, status: 'Pending' });
+  // ── Tareas diarias de Lucas ───────────────────────────────────────────────
+  // status refleja el estado del día de hoy
+  await dailyTask(familyId, lucas.id, 'Levantarte a la primera',      'hogar',           5,  25,  'Pending');
+  await dailyTask(familyId, lucas.id, 'Vestirte solo',                 'responsabilidad', 5,  25,  'Pending');
+  await dailyTask(familyId, lucas.id, 'Hacer los deberes',             'deberes',         15, 100, 'InReview');
+  await dailyTask(familyId, lucas.id, 'Estudiar',                      'deberes',         15, 100, 'Pending');
+  await dailyTask(familyId, lucas.id, 'Cepillarte los dientes',        'responsabilidad', 5,  30,  'Pending');
+  await dailyTask(familyId, lucas.id, 'Prepararte la mochila',         'responsabilidad', 10, 50,  'Pending');
+  await dailyTask(familyId, lucas.id, 'Desayunar sin distraerse',      'comportamiento',  5,  25,  'InReview');
+  await dailyTask(familyId, lucas.id, 'Ducha sin protestar',           'responsabilidad', 10, 50,  'Pending');
+  await dailyTask(familyId, lucas.id, 'Leer 15 minutos',               'deberes',         10, 75,  'Pending');
+  await dailyTask(familyId, lucas.id, 'Un día completo sin pantallas', 'comportamiento',  20, 150, 'Pending');
 
-  // ── Tareas de Sofía ───────────────────────────────────────────────────────
-  const st1 = await Task.create({ familyId, assignedTo: sofia.id, title: 'Recoger los juguetes',    type: 'hogar',           coinsReward: 20, xpReward: 1500, status: 'Approved' });
-  const st2 = await Task.create({ familyId, assignedTo: sofia.id, title: 'Cepillarse los dientes',  type: 'responsabilidad', coinsReward: 15, xpReward: 1700, status: 'Approved' });
-  await       Task.create({ familyId, assignedTo: sofia.id, title: 'Ayudar a poner la mesa', type: 'hogar',           coinsReward: 10, xpReward:  500, status: 'InReview' });
-  await       Task.create({ familyId, assignedTo: sofia.id, title: 'Dormir sin lloriquear',  type: 'comportamiento',  coinsReward: 15, xpReward:  800, status: 'Pending' });
+  // ── Tareas diarias de Sofía ───────────────────────────────────────────────
+  await dailyTask(familyId, sofia.id, 'Levantarte a la primera',       'hogar',           5,  25,  'Pending');
+  await dailyTask(familyId, sofia.id, 'Vestirte sola',                 'responsabilidad', 5,  25,  'Pending');
+  await dailyTask(familyId, sofia.id, 'Ayudar a poner y quitar la mesa','hogar',          5,  30,  'InReview');
+  await dailyTask(familyId, sofia.id, 'Acabarte toda la comida',       'comportamiento',  5,  25,  'Pending');
+  await dailyTask(familyId, sofia.id, 'Cepillarte los dientes',        'responsabilidad', 5,  30,  'Pending');
+  await dailyTask(familyId, sofia.id, 'Recoger los juguetes',          'hogar',           5,  30,  'Pending');
+  await dailyTask(familyId, sofia.id, 'Ducha sin protestar',           'responsabilidad', 10, 50,  'Pending');
 
-  // ── Transacciones de Lucas (suma: +45 monedas, +11000 XP) ─────────────────
-  await Transaction.create({ childId: lucas.id, taskId: lt1.id, type: 'TaskReward', coinsDelta:  20, xpDelta: 2500, description: 'Tarea aprobada: Hacer los deberes' });
-  await Transaction.create({ childId: lucas.id, taskId: lt2.id, type: 'TaskReward', coinsDelta:  25, xpDelta: 3000, description: 'Tarea aprobada: Recoger la habitación' });
-  await Transaction.create({ childId: lucas.id,                  type: 'Penalty',   coinsDelta: -35, xpDelta:    0, description: 'Mal comportamiento en la cena' });
-  await Transaction.create({ childId: lucas.id, taskId: lt3.id, type: 'TaskReward', coinsDelta:  20, xpDelta: 3000, description: 'Tarea aprobada: Ducha sin quejarse' });
-  await Transaction.create({ childId: lucas.id, taskId: lt4.id, type: 'TaskReward', coinsDelta:  15, xpDelta: 2500, description: 'Tarea aprobada: Tender la cama' });
+  // ── Historial de Lucas (suma: +45🪙, +11 000⭐) ───────────────────────────
+  await Transaction.create({ childId: lucas.id, type: 'TaskReward',   coinsDelta:  20, xpDelta: 2500, description: 'Tarea aprobada: Levantarte a la primera' });
+  await Transaction.create({ childId: lucas.id, type: 'TaskReward',   coinsDelta:  25, xpDelta: 3600, description: 'Tarea aprobada: Hacer los deberes' });
+  await Transaction.create({ childId: lucas.id, type: 'DirectRecord', coinsDelta: -35, xpDelta:    0, description: 'Mal comportamiento en el parque' });
+  await Transaction.create({ childId: lucas.id, type: 'TaskReward',   coinsDelta:  20, xpDelta: 2000, description: 'Tarea aprobada: Estudiar' });
+  await Transaction.create({ childId: lucas.id, type: 'TaskReward',   coinsDelta:  15, xpDelta: 2500, description: 'Tarea aprobada: Leer 15 minutos' });
+  await Transaction.create({ childId: lucas.id, type: 'DirectRecord', coinsDelta:  40, xpDelta:  400, description: 'Examen con notable' });
+  await Transaction.create({ childId: lucas.id, type: 'DirectRecord', coinsDelta: -40, xpDelta:    0, description: 'No has hecho los deberes' });
+  // coins: 20+25-35+20+15+40-40 = 45 ✓   xp: 2500+3600+2000+2500+400 = 11000 ✓
 
-  // ── Transacciones de Sofía (suma: +30 monedas, +3200 XP) ─────────────────
-  await Transaction.create({ childId: sofia.id, taskId: st1.id, type: 'TaskReward', coinsDelta:  20, xpDelta: 1500, description: 'Tarea aprobada: Recoger los juguetes' });
-  await Transaction.create({ childId: sofia.id,                  type: 'Penalty',   coinsDelta:  -5, xpDelta:    0, description: 'Berrinche en el supermercado' });
-  await Transaction.create({ childId: sofia.id, taskId: st2.id, type: 'TaskReward', coinsDelta:  15, xpDelta: 1700, description: 'Tarea aprobada: Cepillarse los dientes' });
+  // ── Historial de Sofía (suma: +30🪙, +3 200⭐) ────────────────────────────
+  await Transaction.create({ childId: sofia.id, type: 'TaskReward',   coinsDelta:  20, xpDelta: 1600, description: 'Tarea aprobada: Ayudar a poner y quitar la mesa' });
+  await Transaction.create({ childId: sofia.id, type: 'DirectRecord', coinsDelta: -10, xpDelta:    0, description: 'Berrinche en el supermercado' });
+  await Transaction.create({ childId: sofia.id, type: 'TaskReward',   coinsDelta:  15, xpDelta: 1500, description: 'Tarea aprobada: Recoger los juguetes' });
+  await Transaction.create({ childId: sofia.id, type: 'DirectRecord', coinsDelta:  10, xpDelta:  100, description: 'Buen comportamiento en la comida familiar' });
+  await Transaction.create({ childId: sofia.id, type: 'DirectRecord', coinsDelta:  -5, xpDelta:    0, description: 'Mala actitud antes de dormir' });
+  // coins: 20-10+15+10-5 = 30 ✓   xp: 1600+1500+100 = 3200 ✓
 
   // ── Solicitud de recompensa pendiente (Lucas) ─────────────────────────────
-  // 20 monedas reservadas → saldo efectivo = 45 - 20 = 25
   await RewardRequest.create({
-    childId: lucas.id,
-    rewardId: rewardPantalla.id,
-    status: 'Pending',
-    coinsReserved: 20,
+    childId: lucas.id, rewardId: rewardPantalla.id,
+    status: 'Pending', coinsReserved: 20,
   });
 
   console.log('✓ Demo data seeded — Familia García (padre@demo.com / Demo1234)');
