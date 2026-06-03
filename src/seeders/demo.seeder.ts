@@ -111,7 +111,7 @@ export async function seedDemo(): Promise<void> {
   const lt3 = await Task.create({ familyId, assignedTo: lucas.id, title: 'Ducha sin quejarse',   type: 'responsabilidad', coinsReward: 20, xpReward: 3000, status: 'Approved' });
   const lt4 = await Task.create({ familyId, assignedTo: lucas.id, title: 'Tender la cama',       type: 'hogar',           coinsReward: 15, xpReward: 2500, status: 'Approved' });
   await       Task.create({ familyId, assignedTo: lucas.id, title: 'Poner la mesa',         type: 'hogar',           coinsReward: 10, xpReward:  500, status: 'InReview' });
-  await       Task.create({ familyId, assignedTo: lucas.id, title: 'Estudiar inglés',       type: 'deberes',         coinsReward: 15, xpReward: 1000, status: 'Rejected',
+  await       Task.create({ familyId, assignedTo: lucas.id, title: 'Estudiar inglés',       type: 'deberes',         coinsReward: 15, xpReward: 1000, status: 'Pending',
                              rejectionReason: 'La próxima hazlo sin distracciones.' });
   await       Task.create({ familyId, assignedTo: lucas.id, title: 'Ordenar los juguetes',  type: 'hogar',           coinsReward:  5, xpReward:  100, status: 'Pending' });
 
