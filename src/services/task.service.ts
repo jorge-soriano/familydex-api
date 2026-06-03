@@ -3,7 +3,7 @@ import { Task, TaskStatus } from '../models/task.model';
 import { TaskSeries, TaskType, TaskFrequency } from '../models/taskSeries.model';
 import { User } from '../models/user.model';
 import { AppError } from '../middlewares/errorHandler.middleware';
-import { economyService } from './economy.service';
+import { activityService } from './activity.service';
 export interface CreateTaskDto {
   assignedTo: number;
   title: string;
@@ -140,7 +140,7 @@ export const taskService = {
       throw new AppError(400, 'Solo se pueden aprobar tareas en revisión');
     }
     await task.update({ status: 'Approved' });
-    await economyService.addCoinsAndXp(
+    await activityService.addCoinsAndXp(
       task.assignedTo,
       task.coinsReward,
       task.xpReward,
@@ -176,7 +176,7 @@ export const taskService = {
     if (task.status === 'Approved') throw new AppError(400, 'La tarea ya está aprobada');
 
     await task.update({ status: 'Approved' });
-    await economyService.addCoinsAndXp(
+    await activityService.addCoinsAndXp(
       task.assignedTo,
       task.coinsReward,
       task.xpReward,

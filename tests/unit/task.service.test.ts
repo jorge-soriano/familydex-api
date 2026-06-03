@@ -2,7 +2,7 @@ import { taskService } from '../../src/services/task.service';
 import { Task } from '../../src/models/task.model';
 import { TaskSeries } from '../../src/models/taskSeries.model';
 import { User } from '../../src/models/user.model';
-import { economyService } from '../../src/services/economy.service';
+import { activityService } from '../../src/services/activity.service';
 import { AppError } from '../../src/middlewares/errorHandler.middleware';
 
 jest.mock('../../src/models/task.model', () => ({
@@ -14,14 +14,14 @@ jest.mock('../../src/models/taskSeries.model', () => ({
 jest.mock('../../src/models/user.model', () => ({
   User: { findOne: jest.fn() },
 }));
-jest.mock('../../src/services/economy.service', () => ({
-  economyService: { addCoinsAndXp: jest.fn() },
+jest.mock('../../src/services/activity.service', () => ({
+  activityService: { addCoinsAndXp: jest.fn() },
 }));
 
 const MockTask       = Task       as unknown as { findOne: jest.Mock; findAll: jest.Mock; create: jest.Mock; destroy: jest.Mock; update: jest.Mock };
 const MockTaskSeries = TaskSeries as unknown as { create: jest.Mock; findAll: jest.Mock; destroy: jest.Mock; update: jest.Mock };
 const MockUser       = User       as unknown as { findOne: jest.Mock };
-const MockEconomy    = economyService as unknown as { addCoinsAndXp: jest.Mock };
+const MockEconomy    = activityService as unknown as { addCoinsAndXp: jest.Mock };
 
 const FAMILY = 'family-uuid';
 
@@ -99,7 +99,7 @@ describe('taskService.completeTask', () => {
 });
 
 describe('taskService.approveTask', () => {
-  it('moves task to Approved and calls economyService.addCoinsAndXp', async () => {
+  it('moves task to Approved and calls activityService.addCoinsAndXp', async () => {
     const task = makeTask({ status: 'InReview', coinsReward: 10, xpReward: 20, assignedTo: 2 });
     MockTask.findOne.mockResolvedValue(task);
     MockEconomy.addCoinsAndXp.mockResolvedValue(undefined);

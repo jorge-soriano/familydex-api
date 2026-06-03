@@ -20,7 +20,7 @@ export interface HistoryFilters {
   to?: string;
 }
 
-export const economyService = {
+export const activityService = {
   /** Awards coins + XP. XP is always additive. Wires into pokemonService. */
   async addCoinsAndXp(
     childUserId: number,

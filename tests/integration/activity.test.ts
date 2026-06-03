@@ -29,11 +29,11 @@ async function setup() {
 }
 
 // ── Balance (HU-14) ───────────────────────────────────────────────────────────
-describe('GET /api/economy/balance', () => {
+describe('GET /api/activity/balance', () => {
   it('child gets own balance (starts at 0/0)', async () => {
     const { childToken } = await setup();
     const res = await request(app)
-      .get('/api/economy/balance')
+      .get('/api/activity/balance')
       .set('Authorization', `Bearer ${childToken}`);
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ coins: 0, xp: 0, maxPokemon: 0 });
@@ -52,7 +52,7 @@ describe('GET /api/economy/balance', () => {
       .set('Authorization', `Bearer ${adminToken}`);
 
     const res = await request(app)
-      .get('/api/economy/balance')
+      .get('/api/activity/balance')
       .set('Authorization', `Bearer ${childToken}`);
     expect(res.body).toMatchObject({ coins: 15, xp: 30 });
   });
@@ -60,20 +60,20 @@ describe('GET /api/economy/balance', () => {
   it('admin can get balance for a specific child', async () => {
     const { adminToken, childId } = await setup();
     const res = await request(app)
-      .get(`/api/economy/balance?childId=${childId}`)
+      .get(`/api/activity/balance?childId=${childId}`)
       .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('coins');
   });
 
   it('401 without token', async () => {
-    const res = await request(app).get('/api/economy/balance');
+    const res = await request(app).get('/api/activity/balance');
     expect(res.status).toBe(401);
   });
 });
 
 // ── Penalty (HU-13) ───────────────────────────────────────────────────────────
-describe('POST /api/economy/direct-record (penalty — coinsDelta negativo)', () => {
+describe('POST /api/activity/direct-record (penalty — coinsDelta negativo)', () => {
   it('deducts coins and coins never go negative', async () => {
     const { adminToken, childId, childToken } = await setup();
 
@@ -84,18 +84,18 @@ describe('POST /api/economy/direct-record (penalty — coinsDelta negativo)', ()
     await request(app).post(`/api/tasks/${taskRes.body.id}/approve`).set('Authorization', `Bearer ${adminToken}`);
 
     const res = await request(app)
-      .post('/api/economy/direct-record')
+      .post('/api/activity/direct-record')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ childIds: [childId], coinsDelta: -100, xp: 0, reason: 'Mal comportamiento' });
     expect(res.status).toBe(200);
 
-    const balRes = await request(app).get(`/api/economy/balance?childId=${childId}`).set('Authorization', `Bearer ${adminToken}`);
+    const balRes = await request(app).get(`/api/activity/balance?childId=${childId}`).set('Authorization', `Bearer ${adminToken}`);
     expect(balRes.body.coins).toBe(0);
   });
 
   it('403 when called by a child', async () => {
     const { childToken, childId } = await setup();
-    const res = await request(app).post('/api/economy/direct-record')
+    const res = await request(app).post('/api/activity/direct-record')
       .set('Authorization', `Bearer ${childToken}`)
       .send({ childIds: [childId], coinsDelta: -5, xp: 0, reason: 'test' });
     expect(res.status).toBe(403);
@@ -103,7 +103,7 @@ describe('POST /api/economy/direct-record (penalty — coinsDelta negativo)', ()
 });
 
 // ── Transaction history (HU-15, HU-16) ────────────────────────────────────────
-describe('GET /api/economy/transactions', () => {
+describe('GET /api/activity/transactions', () => {
   it('child gets own transaction history after task approval', async () => {
     const { adminToken, childId, childToken } = await setup();
 
@@ -116,7 +116,7 @@ describe('GET /api/economy/transactions', () => {
       .set('Authorization', `Bearer ${adminToken}`);
 
     const res = await request(app)
-      .get('/api/economy/transactions')
+      .get('/api/activity/transactions')
       .set('Authorization', `Bearer ${childToken}`);
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
@@ -126,7 +126,7 @@ describe('GET /api/economy/transactions', () => {
   it('child can filter by type', async () => {
     const { childToken } = await setup();
     const res = await request(app)
-      .get('/api/economy/transactions?type=Penalty')
+      .get('/api/activity/transactions?type=Penalty')
       .set('Authorization', `Bearer ${childToken}`);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
@@ -144,7 +144,7 @@ describe('GET /api/economy/transactions', () => {
       .set('Authorization', `Bearer ${adminToken}`);
 
     const res = await request(app)
-      .get('/api/economy/transactions')
+      .get('/api/activity/transactions')
       .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
     expect(res.body.length).toBeGreaterThan(0);

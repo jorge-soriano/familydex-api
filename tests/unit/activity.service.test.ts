@@ -1,4 +1,4 @@
-import { economyService } from '../../src/services/economy.service';
+import { activityService } from '../../src/services/activity.service';
 import { ChildProfile } from '../../src/models/childProfile.model';
 import { Transaction } from '../../src/models/transaction.model';
 import { User } from '../../src/models/user.model';
@@ -34,13 +34,13 @@ const makeProfile = (coins: number, xp: number) => ({
 beforeEach(() => jest.clearAllMocks());
 
 // ── addCoinsAndXp ────────────────────────────────────────────────────────────
-describe('economyService.addCoinsAndXp', () => {
+describe('activityService.addCoinsAndXp', () => {
   it('updates ChildProfile coins and xp, records TaskReward Transaction', async () => {
     const profile = makeProfile(100, 500);
     MockProfile.findOne.mockResolvedValue(profile);
     MockTransaction.create.mockResolvedValue({});
 
-    await economyService.addCoinsAndXp(2, 10, 20, 'Tarea: Test', 1);
+    await activityService.addCoinsAndXp(2, 10, 20, 'Tarea: Test', 1);
 
     expect(profile.update).toHaveBeenCalledWith({ coins: 110, xp: 520 });
     expect(MockTransaction.create).toHaveBeenCalledWith(
@@ -50,17 +50,17 @@ describe('economyService.addCoinsAndXp', () => {
 
   it('throws 404 when child profile not found', async () => {
     MockProfile.findOne.mockResolvedValue(null);
-    await expect(economyService.addCoinsAndXp(99, 5, 5, 'test')).rejects.toMatchObject({ status: 404 });
+    await expect(activityService.addCoinsAndXp(99, 5, 5, 'test')).rejects.toMatchObject({ status: 404 });
   });
 });
 
 
 // ── getBalance ────────────────────────────────────────────────────────────────
-describe('economyService.getBalance', () => {
+describe('activityService.getBalance', () => {
   it('returns coins, xp and correct maxPokemon calculation', async () => {
     MockProfile.findOne.mockResolvedValue(makeProfile(200, 12500));
 
-    const balance = await economyService.getBalance(2);
+    const balance = await activityService.getBalance(2);
 
     expect(balance).toMatchObject({
       coins: 200,
@@ -71,23 +71,23 @@ describe('economyService.getBalance', () => {
 
   it('maxPokemon is 1 (starter slot) when xp < 5000', async () => {
     MockProfile.findOne.mockResolvedValue(makeProfile(0, 4999));
-    const balance = await economyService.getBalance(2);
+    const balance = await activityService.getBalance(2);
     expect(balance.maxPokemon).toBe(1); // always at least 1 (starter slot)
   });
 
   it('throws 404 when profile not found', async () => {
     MockProfile.findOne.mockResolvedValue(null);
-    await expect(economyService.getBalance(99)).rejects.toMatchObject({ status: 404 });
+    await expect(activityService.getBalance(99)).rejects.toMatchObject({ status: 404 });
   });
 });
 
 // ── getHistory ────────────────────────────────────────────────────────────────
-describe('economyService.getHistory', () => {
+describe('activityService.getHistory', () => {
   it('returns child transactions ordered by date desc', async () => {
     const txs = [{ id: 2 }, { id: 1 }];
     MockTransaction.findAll.mockResolvedValue(txs);
 
-    const result = await economyService.getHistory(2);
+    const result = await activityService.getHistory(2);
     expect(result).toHaveLength(2);
     expect(MockTransaction.findAll).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ childId: 2 }) })
@@ -96,7 +96,7 @@ describe('economyService.getHistory', () => {
 
   it('filters by type when provided', async () => {
     MockTransaction.findAll.mockResolvedValue([]);
-    await economyService.getHistory(2, { type: 'Penalty' });
+    await activityService.getHistory(2, { type: 'Penalty' });
     expect(MockTransaction.findAll).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ type: 'Penalty' }) })
     );
@@ -104,29 +104,29 @@ describe('economyService.getHistory', () => {
 });
 
 // ── assertChildInFamily ───────────────────────────────────────────────────────
-describe('economyService.assertChildInFamily', () => {
+describe('activityService.assertChildInFamily', () => {
   it('passes when child belongs to family', async () => {
     MockUser.findOne.mockResolvedValue({ id: 2 });
-    await expect(economyService.assertChildInFamily(2, 'family-uuid')).resolves.toBeUndefined();
+    await expect(activityService.assertChildInFamily(2, 'family-uuid')).resolves.toBeUndefined();
   });
 
   it('throws 403 when child not in family', async () => {
     MockUser.findOne.mockResolvedValue(null);
     await expect(
-      economyService.assertChildInFamily(2, 'other-family')
+      activityService.assertChildInFamily(2, 'other-family')
     ).rejects.toMatchObject({ status: 403 });
   });
 });
 
 
 // ── applyDirectRecord ─────────────────────────────────────────────────────────
-describe('economyService.applyDirectRecord', () => {
+describe('activityService.applyDirectRecord', () => {
   it('positive coinsDelta adds coins + XP, creates DirectRecord transaction', async () => {
     const profile = makeProfile(100, 500);
     MockProfile.findOne.mockResolvedValue(profile);
     MockTransaction.create.mockResolvedValue({});
 
-    await economyService.applyDirectRecord([2], 20, 50, 'Buen comportamiento');
+    await activityService.applyDirectRecord([2], 20, 50, 'Buen comportamiento');
 
     expect(profile.update).toHaveBeenCalledWith({ coins: 120, xp: 550 });
     expect(MockTransaction.create).toHaveBeenCalledWith(
@@ -139,7 +139,7 @@ describe('economyService.applyDirectRecord', () => {
     MockProfile.findOne.mockResolvedValue(profile);
     MockTransaction.create.mockResolvedValue({});
 
-    await economyService.applyDirectRecord([2], -30, 0, 'Penalización');
+    await activityService.applyDirectRecord([2], -30, 0, 'Penalización');
 
     // Only 10 can be deducted (profile had 10)
     expect(profile.update).toHaveBeenCalledWith({ coins: 0, xp: 200 });
@@ -150,13 +150,13 @@ describe('economyService.applyDirectRecord', () => {
 
   it('XP never negative — throws when xp < 0', async () => {
     await expect(
-      economyService.applyDirectRecord([2], 10, -5, 'test')
+      activityService.applyDirectRecord([2], 10, -5, 'test')
     ).rejects.toMatchObject({ status: 400 });
   });
 
   it('throws 400 when coinsDelta=0 and xp=0', async () => {
     await expect(
-      economyService.applyDirectRecord([2], 0, 0, 'nada')
+      activityService.applyDirectRecord([2], 0, 0, 'nada')
     ).rejects.toMatchObject({ status: 400 });
   });
 
@@ -168,7 +168,7 @@ describe('economyService.applyDirectRecord', () => {
       .mockResolvedValueOnce(p2);
     MockTransaction.create.mockResolvedValue({});
 
-    await economyService.applyDirectRecord([2, 3], 10, 50, 'Recompensa colectiva');
+    await activityService.applyDirectRecord([2, 3], 10, 50, 'Recompensa colectiva');
 
     expect(MockTransaction.create).toHaveBeenCalledTimes(2);
   });
@@ -181,7 +181,7 @@ describe('economyService.applyDirectRecord', () => {
     MockProfile.findOne.mockResolvedValue(makeProfile(0, 0));
     MockTransaction.create.mockResolvedValue({});
 
-    await economyService.applyDirectRecord([2], 5, 30, 'XP bonus');
+    await activityService.applyDirectRecord([2], 5, 30, 'XP bonus');
     expect(pokemonService.addXpToActive).toHaveBeenCalledWith(2, 30);
   });
 });

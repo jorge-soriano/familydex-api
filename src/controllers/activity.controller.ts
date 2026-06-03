@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { economyService, HistoryFilters } from '../services/economy.service';
+import { activityService, HistoryFilters } from '../services/activity.service';
 import type { TransactionType } from '../models/transaction.model';
 
-export const economyController = {
+export const activityController = {
   // GET /api/economy/balance
   // Child: own balance. Admin: ?childId=X
   async getBalance(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -15,10 +15,10 @@ export const economyController = {
         res.status(400).json({ message: 'Se requiere childId' }); return;
       }
       if (req.user!.role === 'admin') {
-        await economyService.assertChildInFamily(childUserId, req.user!.familyId);
+        await activityService.assertChildInFamily(childUserId, req.user!.familyId);
       }
 
-      const balance = await economyService.getBalance(childUserId);
+      const balance = await activityService.getBalance(childUserId);
       res.json(balance);
     } catch (err) { next(err); }
   },
@@ -35,13 +35,13 @@ export const economyController = {
       };
 
       if (req.user!.role === 'child') {
-        const history = await economyService.getHistory(req.user!.userId, filters);
+        const history = await activityService.getHistory(req.user!.userId, filters);
         res.json(history);
         return;
       }
 
       // Admin: all family or specific child
-      const history = await economyService.getFamilyHistory(req.user!.familyId, {
+      const history = await activityService.getFamilyHistory(req.user!.familyId, {
         ...filters,
         childId: childId ? Number(childId) : undefined,
       });
@@ -68,9 +68,9 @@ export const economyController = {
       }
 
       for (const childId of ids) {
-        await economyService.assertChildInFamily(Number(childId), req.user!.familyId);
+        await activityService.assertChildInFamily(Number(childId), req.user!.familyId);
       }
-      await economyService.applyDirectRecord(ids.map(Number), Number(coinsDelta), Number(xp), reason);
+      await activityService.applyDirectRecord(ids.map(Number), Number(coinsDelta), Number(xp), reason);
       res.status(200).json({ message: 'Registro aplicado' });
     } catch (err) { next(err); }
   },

@@ -100,7 +100,7 @@ export const pokemonService = {
 
   /**
    * Adds XP to the active Pokémon. Triggers evolution if level threshold reached.
-   * Called by economyService.addCoinsAndXp. HU-19
+   * Called by activityService.addCoinsAndXp. HU-19
    */
   async addXpToActive(childId: number, xp: number): Promise<EvoResult | null> {
     const caught = await CaughtPokemon.findOne({
