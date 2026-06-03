@@ -71,11 +71,11 @@ export async function seedDemo(): Promise<void> {
   });
 
   // ── Pokémon ───────────────────────────────────────────────────────────────
+  // Charmander activo con 11 000 pokemonXp → nivel 22 (≥ evolvesAtLevel 16)
+  // = readyToEvolve:true para demo de evolución manual. pokemonXp = xp del perfil.
   const charmander = await Pokemon.findOne({ where: { pokedexNumber: 4 } });
-  const charmeleon = await Pokemon.findOne({ where: { pokedexNumber: 5 } });
-  if (charmander && charmeleon) {
-    await CaughtPokemon.create({ childId: lucas.id, pokemonId: charmander.id, isActive: false, pokemonXp: 5832, caughtAt: new Date() });
-    await CaughtPokemon.create({ childId: lucas.id, pokemonId: charmeleon.id, isActive: true,  pokemonXp: 5832, caughtAt: new Date() });
+  if (charmander) {
+    await CaughtPokemon.create({ childId: lucas.id, pokemonId: charmander.id, isActive: true, pokemonXp: 11000, caughtAt: new Date() });
   }
   const pikachu = await Pokemon.findOne({ where: { pokedexNumber: 25 } });
   if (pikachu) {
