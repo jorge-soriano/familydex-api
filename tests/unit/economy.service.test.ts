@@ -54,51 +54,6 @@ describe('economyService.addCoinsAndXp', () => {
   });
 });
 
-// ── applyPenalty ─────────────────────────────────────────────────────────────
-describe('economyService.applyPenalty', () => {
-  it('deducts coins and records Penalty Transaction', async () => {
-    const profile = makeProfile(100, 500);
-    MockProfile.findOne.mockResolvedValue(profile);
-    MockTransaction.create.mockResolvedValue({});
-
-    await economyService.applyPenalty(2, 30, 'Mal comportamiento');
-
-    expect(profile.update).toHaveBeenCalledWith({ coins: 70 });
-    expect(MockTransaction.create).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'Penalty', coinsDelta: -30, xpDelta: 0 })
-    );
-  });
-
-  it('coins floor at 0 — never goes negative', async () => {
-    const profile = makeProfile(10, 200);
-    MockProfile.findOne.mockResolvedValue(profile);
-    MockTransaction.create.mockResolvedValue({});
-
-    await economyService.applyPenalty(2, 50, 'Penalización grande');
-
-    // Only 10 could be deducted (min of 50 and 10)
-    expect(profile.update).toHaveBeenCalledWith({ coins: 0 });
-    expect(MockTransaction.create).toHaveBeenCalledWith(
-      expect.objectContaining({ coinsDelta: -10 })
-    );
-  });
-
-  it('XP is never affected by a penalty', async () => {
-    const profile = makeProfile(50, 1000);
-    MockProfile.findOne.mockResolvedValue(profile);
-    MockTransaction.create.mockResolvedValue({});
-
-    await economyService.applyPenalty(2, 20, 'reason');
-
-    expect(MockTransaction.create).toHaveBeenCalledWith(
-      expect.objectContaining({ xpDelta: 0 })
-    );
-    // xp not touched
-    expect(profile.update).toHaveBeenCalledWith(
-      expect.not.objectContaining({ xp: expect.anything() })
-    );
-  });
-});
 
 // ── getBalance ────────────────────────────────────────────────────────────────
 describe('economyService.getBalance', () => {
@@ -163,66 +118,6 @@ describe('economyService.assertChildInFamily', () => {
   });
 });
 
-// ── applyDirectReward ─────────────────────────────────────────────────────────
-describe('economyService.applyDirectReward', () => {
-  it('adds coins and XP to profile, records DirectReward Transaction', async () => {
-    const profile = makeProfile(100, 500);
-    MockProfile.findOne.mockResolvedValue(profile);
-    MockTransaction.create.mockResolvedValue({});
-
-    await economyService.applyDirectReward(2, 15, 75, 'Buen comportamiento');
-
-    expect(profile.update).toHaveBeenCalledWith({ coins: 115, xp: 575 });
-    expect(MockTransaction.create).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'DirectReward', coinsDelta: 15, xpDelta: 75 })
-    );
-  });
-
-  it('XP never decreases — applyDirectReward only adds', async () => {
-    const profile = makeProfile(50, 1000);
-    MockProfile.findOne.mockResolvedValue(profile);
-    MockTransaction.create.mockResolvedValue({});
-
-    await economyService.applyDirectReward(2, 0, 100, 'bonus XP');
-    expect(profile.update).toHaveBeenCalledWith({ coins: 50, xp: 1100 });
-  });
-
-  it('throws 400 when both coins and xp are 0', async () => {
-    await expect(
-      economyService.applyDirectReward(2, 0, 0, 'nada')
-    ).rejects.toMatchObject({ status: 400 });
-  });
-
-  it('throws 400 when coins is negative', async () => {
-    await expect(
-      economyService.applyDirectReward(2, -5, 0, 'negativo')
-    ).rejects.toMatchObject({ status: 400 });
-  });
-
-  it('calls pokemonService.addXpToActive when xp > 0', async () => {
-    const profile = makeProfile(0, 0);
-    MockProfile.findOne.mockResolvedValue(profile);
-    MockTransaction.create.mockResolvedValue({});
-    const { pokemonService } = require('../../src/services/pokemon.service');
-
-    await economyService.applyDirectReward(2, 0, 50, 'xp bonus');
-
-    expect(pokemonService.addXpToActive).toHaveBeenCalledWith(2, 50);
-  });
-
-  it('does NOT call pokemonService.addXpToActive when xp = 0', async () => {
-    const profile = makeProfile(100, 0);
-    MockProfile.findOne.mockResolvedValue(profile);
-    MockTransaction.create.mockResolvedValue({});
-    const { pokemonService } = require('../../src/services/pokemon.service');
-    jest.clearAllMocks();
-    MockProfile.findOne.mockResolvedValue(profile);
-    MockTransaction.create.mockResolvedValue({});
-
-    await economyService.applyDirectReward(2, 10, 0, 'solo monedas');
-    expect(pokemonService.addXpToActive).not.toHaveBeenCalled();
-  });
-});
 
 // ── applyDirectRecord ─────────────────────────────────────────────────────────
 describe('economyService.applyDirectRecord', () => {

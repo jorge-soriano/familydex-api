@@ -73,77 +73,31 @@ describe('GET /api/economy/balance', () => {
 });
 
 // ── Penalty (HU-13) ───────────────────────────────────────────────────────────
-describe('POST /api/economy/penalty', () => {
+describe('POST /api/economy/direct-record (penalty — coinsDelta negativo)', () => {
   it('deducts coins and coins never go negative', async () => {
     const { adminToken, childId, childToken } = await setup();
 
-    // First give some coins
     const taskRes = await request(app).post('/api/tasks')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ assignedTo: childId, title: 'T', type: 'hogar', coinsReward: 20, xpReward: 10, frequency: 'OneTime' });
-    const completeRes = await request(app).post(`/api/tasks/${taskRes.body.id}/complete`)
-      .set('Authorization', `Bearer ${childToken}`);
-    await request(app).post(`/api/tasks/${completeRes.body.id ?? taskRes.body.id}/approve`)
-      .set('Authorization', `Bearer ${adminToken}`);
+    await request(app).post(`/api/tasks/${taskRes.body.id}/complete`).set('Authorization', `Bearer ${childToken}`);
+    await request(app).post(`/api/tasks/${taskRes.body.id}/approve`).set('Authorization', `Bearer ${adminToken}`);
 
-    // Apply penalty larger than balance
     const res = await request(app)
-      .post('/api/economy/penalty')
+      .post('/api/economy/direct-record')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ childId, amount: 100, reason: 'Mal comportamiento' });
+      .send({ childIds: [childId], coinsDelta: -100, xp: 0, reason: 'Mal comportamiento' });
     expect(res.status).toBe(200);
 
-    // Balance should be 0, not negative
-    const balRes = await request(app)
-      .get(`/api/economy/balance?childId=${childId}`)
-      .set('Authorization', `Bearer ${adminToken}`);
+    const balRes = await request(app).get(`/api/economy/balance?childId=${childId}`).set('Authorization', `Bearer ${adminToken}`);
     expect(balRes.body.coins).toBe(0);
-  });
-
-  it('XP is not affected by penalty', async () => {
-    const { adminToken, childId, childToken } = await setup();
-
-    // Give XP via task
-    const taskRes = await request(app).post('/api/tasks')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ assignedTo: childId, title: 'T', type: 'hogar', coinsReward: 5, xpReward: 50, frequency: 'OneTime' });
-    await request(app).post(`/api/tasks/${taskRes.body.id}/complete`)
-      .set('Authorization', `Bearer ${childToken}`);
-    await request(app).post(`/api/tasks/${taskRes.body.id}/approve`)
-      .set('Authorization', `Bearer ${adminToken}`);
-
-    await request(app).post('/api/economy/penalty')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ childId, amount: 5, reason: 'test' });
-
-    const balRes = await request(app)
-      .get(`/api/economy/balance?childId=${childId}`)
-      .set('Authorization', `Bearer ${adminToken}`);
-    expect(balRes.body.xp).toBe(50);   // XP unchanged
-    expect(balRes.body.coins).toBe(0); // Coins deducted
-  });
-
-  it('400 when amount <= 0', async () => {
-    const { adminToken, childId } = await setup();
-    const res = await request(app).post('/api/economy/penalty')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ childId, amount: 0, reason: 'test' });
-    expect(res.status).toBe(400);
-  });
-
-  it('403 when child not in admin family', async () => {
-    const { adminToken } = await setup();
-    const res = await request(app).post('/api/economy/penalty')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ childId: 9999, amount: 10, reason: 'test' });
-    expect(res.status).toBe(403);
   });
 
   it('403 when called by a child', async () => {
     const { childToken, childId } = await setup();
-    const res = await request(app).post('/api/economy/penalty')
+    const res = await request(app).post('/api/economy/direct-record')
       .set('Authorization', `Bearer ${childToken}`)
-      .send({ childId, amount: 5, reason: 'test' });
+      .send({ childIds: [childId], coinsDelta: -5, xp: 0, reason: 'test' });
     expect(res.status).toBe(403);
   });
 });

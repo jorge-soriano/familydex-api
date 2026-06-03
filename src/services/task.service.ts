@@ -4,17 +4,6 @@ import { TaskSeries, TaskType, TaskFrequency } from '../models/taskSeries.model'
 import { User } from '../models/user.model';
 import { AppError } from '../middlewares/errorHandler.middleware';
 import { economyService } from './economy.service';
-import type { EvoResult } from './pokemon.service';
-
-export interface CreateCompletedTaskDto {
-  childId: number;
-  title: string;
-  description?: string;
-  type: TaskType;
-  coinsReward: number;
-  xpReward: number;
-}
-
 export interface CreateTaskDto {
   assignedTo: number;
   title: string;
@@ -176,48 +165,7 @@ export const taskService = {
   },
 
   /** Called by node-cron every midnight to generate daily/weekly instances. */
-  async generateRecurringTasks(): Promise<number> {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
 
-    const activeSeries = await TaskSeries.findAll({ where: { isActive: true } });
-    let created = 0;
-
-    for (const series of activeSeries) {
-      if (series.frequency === 'Weekly') {
-        const days: number[] = JSON.parse(series.daysOfWeek || '[]');
-        if (!days.includes(dayOfWeek)) continue;
-      }
-
-      // No crear nueva instancia si ya hay una Pending (el niño aún no la ha hecho).
-      // Sí crear si está InReview (el niño cumplió, el padre aún no ha revisado),
-      // Approved o Rejected (resuelta, toca una nueva).
-      const pendingExists = await Task.findOne({
-        where: { seriesId: series.id, status: 'Pending' },
-      });
-      if (pendingExists) continue;
-
-      await Task.create({
-        familyId: series.familyId,
-        assignedTo: series.assignedTo,
-        seriesId: series.id,
-        title: series.title,
-        description: series.description,
-        type: series.type,
-        coinsReward: series.coinsReward,
-        xpReward: series.xpReward,
-      });
-      created++;
-    }
-
-    return created;
-  },
-
-  /**
-   * Registers an already-completed achievement on behalf of the child.
-   * Creates a Task with status=Approved and immediately awards coins/XP.
-   * Use case: "El niño sacó un notable — quiero darle XP sin que él lo marque."
-   */
   /**
    * Admin approves a task regardless of its current status (Pending or InReview).
    * Useful when the parent wants to confirm a task without waiting for the child.
@@ -262,38 +210,41 @@ export const taskService = {
     return { isEnabled: newEnabled };
   },
 
-  async createCompletedTaskByAdmin(
-    dto: CreateCompletedTaskDto,
-    adminFamilyId: string
-  ): Promise<{ task: Task; evolutionResult?: EvoResult }> {
-    if (dto.coinsReward < 0 || dto.xpReward < 0) {
-      throw new AppError(400, 'Las recompensas no pueden ser negativas');
+  async generateRecurringTasks(): Promise<number> {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+
+    const activeSeries = await TaskSeries.findAll({ where: { isActive: true } });
+    let created = 0;
+
+    for (const series of activeSeries) {
+      if (series.frequency === 'Weekly') {
+        const days: number[] = JSON.parse(series.daysOfWeek || '[]');
+        if (!days.includes(dayOfWeek)) continue;
+      }
+
+      // No crear nueva instancia si ya hay una Pending (el niño aún no la ha hecho).
+      // Sí crear si está InReview (el niño cumplió, el padre aún no ha revisado),
+      // Approved o Rejected (resuelta, toca una nueva).
+      const pendingExists = await Task.findOne({
+        where: { seriesId: series.id, status: 'Pending' },
+      });
+      if (pendingExists) continue;
+
+      await Task.create({
+        familyId: series.familyId,
+        assignedTo: series.assignedTo,
+        seriesId: series.id,
+        title: series.title,
+        description: series.description,
+        type: series.type,
+        coinsReward: series.coinsReward,
+        xpReward: series.xpReward,
+      });
+      created++;
     }
 
-    const child = await User.findOne({
-      where: { id: dto.childId, familyId: adminFamilyId, role: 'child', isActive: true },
-    });
-    if (!child) throw new AppError(404, 'Hijo no encontrado en esta familia');
-
-    const task = await Task.create({
-      familyId: adminFamilyId,
-      assignedTo: dto.childId,
-      title: dto.title,
-      description: dto.description ?? null,
-      type: dto.type,
-      coinsReward: dto.coinsReward,
-      xpReward: dto.xpReward,
-      status: 'Approved',
-    });
-
-    const result = await economyService.addCoinsAndXp(
-      dto.childId,
-      dto.coinsReward,
-      dto.xpReward,
-      `Logro registrado: ${dto.title}`,
-      task.id
-    );
-
-    return { task, ...result };
+    return created;
   },
+
 };

@@ -14,7 +14,7 @@ export async function migrateDown(): Promise<void>  { await umzug.down({ to: 0 }
 
 export async function clearAll(): Promise<void> {
   await sequelize.query(
-    `TRUNCATE TABLE task_templates, reward_requests, caught_pokemon, transactions,
+    `TRUNCATE TABLE reward_requests, caught_pokemon, transactions,
      tasks, task_series, child_profiles, users, pokemon, rewards
      RESTART IDENTITY CASCADE`
   );

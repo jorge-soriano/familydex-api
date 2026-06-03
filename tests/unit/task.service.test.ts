@@ -152,46 +152,6 @@ describe('taskService.deleteTask', () => {
   });
 });
 
-// ── createCompletedTaskByAdmin ────────────────────────────────────────────────
-describe('taskService.createCompletedTaskByAdmin', () => {
-  it('creates Task with Approved status and calls economyService', async () => {
-    MockUser.findOne.mockResolvedValue({ id: 2, familyId: FAMILY, role: 'child', isActive: true });
-    MockTask.create.mockResolvedValue({
-      id: 10, status: 'Approved', coinsReward: 20, xpReward: 100, title: 'Notable en mates', assignedTo: 2,
-    });
-    MockEconomy.addCoinsAndXp.mockResolvedValue({});
-
-    const { task } = await taskService.createCompletedTaskByAdmin(
-      { childId: 2, title: 'Notable en mates', type: 'deberes', coinsReward: 20, xpReward: 100 },
-      FAMILY
-    );
-
-    expect(MockTask.create).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'Approved', assignedTo: 2 })
-    );
-    expect(MockEconomy.addCoinsAndXp).toHaveBeenCalledWith(2, 20, 100, expect.any(String), 10);
-    expect(task.status).toBe('Approved');
-  });
-
-  it('throws 404 when child not found in family', async () => {
-    MockUser.findOne.mockResolvedValue(null);
-    await expect(
-      taskService.createCompletedTaskByAdmin(
-        { childId: 99, title: 'T', type: 'hogar', coinsReward: 0, xpReward: 0 },
-        FAMILY
-      )
-    ).rejects.toMatchObject({ status: 404 });
-  });
-
-  it('throws 400 when rewards are negative', async () => {
-    await expect(
-      taskService.createCompletedTaskByAdmin(
-        { childId: 2, title: 'T', type: 'hogar', coinsReward: -1, xpReward: 0 },
-        FAMILY
-      )
-    ).rejects.toMatchObject({ status: 400 });
-  });
-});
 
 // ── multi-asignación (vía controller, no service) ─────────────────────────────
 // El servicio createTask sigue aceptando un solo childId.
