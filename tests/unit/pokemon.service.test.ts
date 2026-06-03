@@ -152,6 +152,37 @@ describe('pokemonService.capture', () => {
     MockCaught.findOne.mockResolvedValue({ id: 5 }); // already caught
     await expect(pokemonService.capture(2, 1)).rejects.toMatchObject({ status: 409 });
   });
+
+  it('allows capture after evolution — evolved form does not consume a slot', async () => {
+    // Child has 11000 XP → maxPokemon=3. count returns 1 (only base Charmander).
+    // Charmeleon is the evolved form and is NOT counted by the filtered query.
+    MockProfile.findOne.mockResolvedValue({ userId: 2, xp: 11000, coins: 0 });
+    MockCaught.count.mockResolvedValue(1); // only base-form catches
+    MockPokemon.findByPk.mockResolvedValue(fakePokemon({ unlockXp: 5000, evolutionOrder: null }));
+    MockCaught.findOne.mockResolvedValue(null);
+    MockCaught.create.mockResolvedValue({});
+
+    await pokemonService.capture(2, 99);
+    expect(MockCaught.create).toHaveBeenCalled();
+  });
+
+  it('CaughtPokemon.count is called with as:pokemon include to exclude evolutions', async () => {
+    MockProfile.findOne.mockResolvedValue({ userId: 2, xp: 5000, coins: 0 });
+    MockCaught.count.mockResolvedValue(1);
+    MockPokemon.findByPk.mockResolvedValue(fakePokemon({ unlockXp: 5000 }));
+    MockCaught.findOne.mockResolvedValue(null);
+    MockCaught.create.mockResolvedValue({});
+
+    await pokemonService.capture(2, 1);
+
+    expect(MockCaught.count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: expect.arrayContaining([
+          expect.objectContaining({ as: 'pokemon' }),
+        ]),
+      })
+    );
+  });
 });
 
 // ── setActive ─────────────────────────────────────────────────────────────────

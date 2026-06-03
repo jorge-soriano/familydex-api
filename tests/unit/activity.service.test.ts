@@ -56,23 +56,55 @@ describe('activityService.addCoinsAndXp', () => {
 
 
 // ── getBalance ────────────────────────────────────────────────────────────────
+const MockCaught = require('../../src/models/caughtPokemon.model').CaughtPokemon as { count: jest.Mock };
+
 describe('activityService.getBalance', () => {
   it('returns coins, xp and correct maxPokemon calculation', async () => {
     MockProfile.findOne.mockResolvedValue(makeProfile(200, 12500));
+    MockCaught.count.mockResolvedValue(1);
 
     const balance = await activityService.getBalance(2);
 
     expect(balance).toMatchObject({
       coins: 200,
       xp: 12500,
-      maxPokemon: 3,   // 1 (starter slot) + floor(12500 / 5000) = 1 + 2
+      maxPokemon: 3,   // 1 + floor(12500/5000) = 3
     });
   });
 
   it('maxPokemon is 1 (starter slot) when xp < 5000', async () => {
     MockProfile.findOne.mockResolvedValue(makeProfile(0, 4999));
+    MockCaught.count.mockResolvedValue(1);
     const balance = await activityService.getBalance(2);
-    expect(balance.maxPokemon).toBe(1); // always at least 1 (starter slot)
+    expect(balance.maxPokemon).toBe(1);
+  });
+
+  it('pendingCaptures counts only base-form catches (not evolutions)', async () => {
+    // Child has 11000 XP → maxPokemon=3. Has Charmander (base) + Charmeleon (evolved).
+    // count returns 1 because the include filters to evolutionOrder=1|null.
+    MockProfile.findOne.mockResolvedValue(makeProfile(0, 11000));
+    MockCaught.count.mockResolvedValue(1); // only Charmander counts
+
+    const balance = await activityService.getBalance(2);
+
+    expect(balance.maxPokemon).toBe(3);
+    expect(balance.caughtCount).toBe(1);
+    expect(balance.pendingCaptures).toBe(2);
+  });
+
+  it('CaughtPokemon.count is called with as:pokemon include to exclude evolutions', async () => {
+    MockProfile.findOne.mockResolvedValue(makeProfile(0, 5000));
+    MockCaught.count.mockResolvedValue(1);
+
+    await activityService.getBalance(2);
+
+    expect(MockCaught.count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: expect.arrayContaining([
+          expect.objectContaining({ as: 'pokemon' }),
+        ]),
+      })
+    );
   });
 
   it('throws 404 when profile not found', async () => {

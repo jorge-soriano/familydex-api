@@ -154,3 +154,39 @@ describe('PUT /api/pokemon/active', () => {
     expect(setRes.status).toBe(200);
   });
 });
+
+// ── Capture slots after evolution (regression HU-20) ─────────────────────────
+describe('pendingCaptures after evolution', () => {
+  it('evolved form does not consume a capture slot', async () => {
+    const { adminToken, childId, childToken } = await setup();
+
+    // Choose Charmander (evolutionOrder=1, evolvesAtLevel=16)
+    const starters = await request(app).get('/api/pokemon/starters')
+      .set('Authorization', `Bearer ${childToken}`);
+    const charmander = starters.body.find((p: any) => p.name === 'Charmander');
+    await request(app).post('/api/pokemon/choose-initial')
+      .set('Authorization', `Bearer ${childToken}`)
+      .send({ pokemonId: charmander.id });
+
+    // Give enough XP to reach level 16 (16^3 = 4096) AND unlock a capture (5000 XP)
+    // We approve tasks totalling 11000 XP to cover both thresholds
+    for (let i = 0; i < 11; i++) {
+      const t = await request(app).post('/api/tasks')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ assignedTo: childId, title: `T${i}`, type: 'hogar', coinsReward: 0, xpReward: 1000, frequency: 'OneTime' });
+      await request(app).post(`/api/tasks/${t.body.id}/complete`)
+        .set('Authorization', `Bearer ${childToken}`);
+      await request(app).post(`/api/tasks/${t.body.id}/approve`)
+        .set('Authorization', `Bearer ${adminToken}`);
+    }
+
+    // Balance should reflect 2 pending captures (11000 XP → maxPokemon=3, caughtCount=1)
+    // even though Charmeleon evolved and added a second row to caught_pokemon
+    const balanceRes = await request(app).get('/api/activity/balance')
+      .set('Authorization', `Bearer ${childToken}`);
+    expect(balanceRes.status).toBe(200);
+    expect(balanceRes.body.maxPokemon).toBe(3);
+    expect(balanceRes.body.caughtCount).toBe(1);
+    expect(balanceRes.body.pendingCaptures).toBe(2);
+  });
+});
