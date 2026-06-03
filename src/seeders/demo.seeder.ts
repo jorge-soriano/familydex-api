@@ -8,7 +8,6 @@ import { Reward } from '../models/reward.model';
 import { RewardRequest } from '../models/rewardRequest.model';
 import { Pokemon } from '../models/pokemon.model';
 import { CaughtPokemon } from '../models/caughtPokemon.model';
-import { TaskTemplate } from '../models/taskTemplate.model';
 
 const DEMO_EMAIL   = 'padre@demo.com';
 const SALT_ROUNDS  = 10;
@@ -142,29 +141,6 @@ export async function seedDemo(): Promise<void> {
     status: 'Pending',
     coinsReserved: 20,
   });
-
-  // ── Plantillas de misiones ────────────────────────────────────────────────
-  const templates = [
-    // Rutinas del hogar
-    { title: 'Hacer la cama',         type: 'hogar',          coinsReward:  5, xpReward:  30, category: 'Hogar' },
-    { title: 'Ordenar la habitación', type: 'hogar',          coinsReward: 10, xpReward:  50, category: 'Hogar' },
-    { title: 'Ayudar a poner la mesa',type: 'hogar',          coinsReward:  5, xpReward:  25, category: 'Hogar' },
-    // Estudio
-    { title: 'Leer 15 minutos',       type: 'deberes',        coinsReward: 10, xpReward:  75, category: 'Estudio' },
-    { title: 'Preparar la mochila',   type: 'responsabilidad',coinsReward:  5, xpReward:  30, category: 'Estudio' },
-    // Exámenes (variantes independientes — preparado para agrupar en el futuro via category)
-    { title: 'Examen aprobado — suficiente', type: 'deberes', coinsReward: 20, xpReward: 150, category: 'Exámenes' },
-    { title: 'Examen aprobado — bien',       type: 'deberes', coinsReward: 30, xpReward: 250, category: 'Exámenes' },
-    { title: 'Examen aprobado — notable',    type: 'deberes', coinsReward: 40, xpReward: 400, category: 'Exámenes' },
-    { title: 'Examen aprobado — excelente',  type: 'deberes', coinsReward: 60, xpReward: 600, category: 'Exámenes' },
-    // Comportamiento
-    { title: 'Ayudar en casa',         type: 'hogar',         coinsReward: 10, xpReward:  50, category: 'Comportamiento' },
-    { title: 'Buen comportamiento',    type: 'comportamiento', coinsReward: 15, xpReward: 100, category: 'Comportamiento' },
-  ];
-
-  for (const t of templates) {
-    await TaskTemplate.create({ familyId, ...t } as any);
-  }
 
   console.log('✓ Demo data seeded — Familia García (padre@demo.com / Demo1234)');
 }

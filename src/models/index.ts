@@ -8,7 +8,6 @@ import { Pokemon } from './pokemon.model';
 import { CaughtPokemon } from './caughtPokemon.model';
 import { Reward } from './reward.model';
 import { RewardRequest } from './rewardRequest.model';
-import { TaskTemplate } from './taskTemplate.model';
 
 User.hasOne(ChildProfile,  { foreignKey: 'userId',    as: 'childProfile' });
 ChildProfile.belongsTo(User, { foreignKey: 'userId',  as: 'user' });
@@ -34,9 +33,4 @@ RewardRequest.belongsTo(User,        { foreignKey: 'childId',  as: 'child' });
 RewardRequest.hasMany(Transaction,   { foreignKey: 'rewardRequestId', as: 'transactions' });
 Transaction.belongsTo(RewardRequest, { foreignKey: 'rewardRequestId', as: 'rewardRequest' });
 
-// TaskTemplate belongs to a family (identified by familyId UUID, no separate FK table)
-
-export {
-  sequelize, User, ChildProfile, TaskSeries, Task, Transaction,
-  Pokemon, CaughtPokemon, Reward, RewardRequest, TaskTemplate,
-};
+export { sequelize, User, ChildProfile, TaskSeries, Task, Transaction, Pokemon, CaughtPokemon, Reward, RewardRequest };
