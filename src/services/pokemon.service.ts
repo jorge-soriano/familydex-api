@@ -182,7 +182,12 @@ export const pokemonService = {
 
     // Slot 0 is always the starter; every 5000 XP earns one more slot
     const maxPokemon = 1 + Math.floor(profile.xp / 5000);
-    const totalCaught = await CaughtPokemon.count({ where: { childId } });
+    // Count only base-form catches (evolvesFrom IS NULL) — evolved forms
+    // add a row to CaughtPokemon but don't consume a capture slot.
+    const totalCaught = await CaughtPokemon.count({
+      where: { childId },
+      include: [{ model: Pokemon, where: { evolvesFrom: null }, required: true }],
+    });
     if (totalCaught >= maxPokemon) {
       throw new AppError(400, 'No tienes capturas pendientes disponibles');
     }
