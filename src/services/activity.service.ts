@@ -3,6 +3,7 @@ import { ChildProfile } from '../models/childProfile.model';
 import { Transaction, TransactionType } from '../models/transaction.model';
 import { User } from '../models/user.model';
 import { CaughtPokemon } from '../models/caughtPokemon.model';
+import { Pokemon } from '../models/pokemon.model';
 import { AppError } from '../middlewares/errorHandler.middleware';
 import { pokemonService, EvoResult } from './pokemon.service';
 
@@ -50,7 +51,10 @@ export const activityService = {
     if (!profile) throw new AppError(404, 'Perfil de hijo no encontrado');
 
     const maxPokemon  = 1 + Math.floor(profile.xp / 5000); // starter slot + earned slots
-    const caughtCount = await CaughtPokemon.count({ where: { childId: childUserId } });
+    const caughtCount = await CaughtPokemon.count({
+      where: { childId: childUserId },
+      include: [{ model: Pokemon, where: { evolvesFrom: null }, required: true }],
+    });
 
     return {
       coins: profile.coins, xp: profile.xp, maxPokemon, caughtCount,
