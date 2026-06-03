@@ -54,7 +54,7 @@ export const activityService = {
     const caughtCount = await CaughtPokemon.count({
       where: { childId: childUserId },
       include: [{
-        model: Pokemon,
+        model: Pokemon, as: 'pokemon',
         where: { [Op.or]: [{ evolutionOrder: null }, { evolutionOrder: 1 }] },
         required: true,
       }],
