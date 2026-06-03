@@ -99,6 +99,7 @@ export const authController = {
           id: u.id,
           username: u.username,
           displayName: (u as any).childProfile?.displayName ?? u.username,
+          avatarColor: (u as any).childProfile?.avatarColor ?? null,
         }))
       );
     } catch (err) {
