@@ -186,7 +186,11 @@ export const pokemonService = {
     // add a row to CaughtPokemon but don't consume a capture slot.
     const totalCaught = await CaughtPokemon.count({
       where: { childId },
-      include: [{ model: Pokemon, where: { evolvesFrom: null }, required: true }],
+      include: [{
+        model: Pokemon,
+        where: { [Op.or]: [{ evolutionOrder: null }, { evolutionOrder: 1 }] },
+        required: true,
+      }],
     });
     if (totalCaught >= maxPokemon) {
       throw new AppError(400, 'No tienes capturas pendientes disponibles');

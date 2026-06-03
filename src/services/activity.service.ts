@@ -53,7 +53,11 @@ export const activityService = {
     const maxPokemon  = 1 + Math.floor(profile.xp / 5000); // starter slot + earned slots
     const caughtCount = await CaughtPokemon.count({
       where: { childId: childUserId },
-      include: [{ model: Pokemon, where: { evolvesFrom: null }, required: true }],
+      include: [{
+        model: Pokemon,
+        where: { [Op.or]: [{ evolutionOrder: null }, { evolutionOrder: 1 }] },
+        required: true,
+      }],
     });
 
     return {
