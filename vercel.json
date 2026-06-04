@@ -1,13 +1,12 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/index.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["node_modules/pg/**", "node_modules/pg-hstore/**"]
-      }
+  "functions": {
+    "api/index.ts": {
+      "memory": 512,
+      "maxDuration": 10
     }
-  ],
-  "routes": [{ "src": "/(.*)", "dest": "api/index.ts" }]
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index" }
+  ]
 }
