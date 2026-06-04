@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { Pokemon } from '../models/pokemon.model';
 
 // Starters: unlockXp=0, evolutionOrder=1 — shown in onboarding
@@ -49,4 +50,8 @@ export async function seedPokemon(): Promise<void> {
 
   await Pokemon.bulkCreate(POKEMON_DATA as any[]);
   console.log(`Seeded ${POKEMON_DATA.length} Pokémon`);
+}
+
+if (require.main === module) {
+  seedPokemon().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });
 }

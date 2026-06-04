@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
 import { User } from '../models/user.model';
@@ -139,4 +140,8 @@ export async function seedDemo(): Promise<void> {
   });
 
   console.log('✓ Demo data seeded — Familia García (padre@demo.com / Demo1234)');
+}
+
+if (require.main === module) {
+  seedDemo().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });
 }
