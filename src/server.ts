@@ -39,6 +39,14 @@ function validateSecrets(): void {
 async function start(): Promise<void> {
   validateSecrets();
 
+  const dbHost = process.env.DB_HOST ?? 'localhost';
+  const dbPort = process.env.DB_PORT ?? '5432';
+  const dbName = process.env.NODE_ENV === 'test'
+    ? (process.env.DB_NAME_TEST ?? 'familydex_test')
+    : (process.env.DB_NAME ?? 'familydex_dev');
+  const dbUser = process.env.DB_USER ?? 'familydex';
+  console.log(`Connecting to DB: ${dbUser}@${dbHost}:${dbPort}/${dbName}`);
+
   await sequelize.authenticate();
   console.log('Database connected');
   // Schema managed by Sequelize CLI migrations (src/migrations/)

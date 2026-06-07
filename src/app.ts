@@ -41,9 +41,12 @@ if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10,                   // 10 attempts per window per IP
+  skip: () => isDev,         // disabled in development
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Demasiados intentos de acceso. Espera 15 minutos.' },
@@ -56,6 +59,7 @@ const loginLimiter = rateLimit({
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5,                    // 5 registrations per hour per IP
+  skip: () => isDev,         // disabled in development
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Demasiados registros. Espera una hora.' },
