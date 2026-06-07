@@ -149,6 +149,7 @@ export const adminService = {
         ? { pokedexNumber: pokemon.pokedexNumber, name: pokemon.name, level: calcLevel(cp.pokemonXp) }
         : null,
       pendingReviewCount: reviewCount,
+      pendingRewardRequestCount: 0,
     };
   },
 
