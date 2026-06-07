@@ -28,6 +28,7 @@ export interface ChildSummary {
   xp: number;
   activePokemon: ActivePokemonSummary | null;
   pendingReviewCount: number;
+  pendingRewardRequestCount: number;
 }
 
 export interface DashboardData {
@@ -70,12 +71,22 @@ async function buildChildSummaries(familyId: string): Promise<{
     reviewCountMap[t.assignedTo] = (reviewCountMap[t.assignedTo] ?? 0) + 1;
   }
 
-  // Pending reward requests for this family
+  // Pending reward requests per child for this family
   const familyRewards = await Reward.findAll({ where: { familyId }, attributes: ['id'] });
   const rewardIds = familyRewards.map((r) => r.id);
-  const totalPendingRequests = rewardIds.length
-    ? await RewardRequest.count({ where: { rewardId: { [Op.in]: rewardIds }, status: 'Pending' } })
-    : 0;
+  const pendingRequestsList = rewardIds.length
+    ? await RewardRequest.findAll({
+        where: { rewardId: { [Op.in]: rewardIds }, status: 'Pending' },
+        attributes: ['childId'],
+      })
+    : [];
+
+  const requestCountMap: Record<number, number> = {};
+  let totalPendingRequests = 0;
+  for (const r of pendingRequestsList) {
+    requestCountMap[r.childId] = (requestCountMap[r.childId] ?? 0) + 1;
+    totalPendingRequests++;
+  }
 
   const children: ChildSummary[] = users.map((u) => {
     const profile  = (u as any).childProfile as ChildProfile | null;
@@ -94,6 +105,7 @@ async function buildChildSummaries(familyId: string): Promise<{
         ? { pokedexNumber: pokemon.pokedexNumber, name: pokemon.name, level: calcLevel(cp.pokemonXp) }
         : null,
       pendingReviewCount: reviewCountMap[u.id] ?? 0,
+      pendingRewardRequestCount: requestCountMap[u.id] ?? 0,
     };
   });
 
