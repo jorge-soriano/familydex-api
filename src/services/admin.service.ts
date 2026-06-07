@@ -77,7 +77,6 @@ async function buildChildSummaries(familyId: string): Promise<{
   const pendingRequestsList = rewardIds.length
     ? await RewardRequest.findAll({
         where: { rewardId: { [Op.in]: rewardIds }, status: 'Pending' },
-        attributes: ['childId'],
       })
     : [];
 
