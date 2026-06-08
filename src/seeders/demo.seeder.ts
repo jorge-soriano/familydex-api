@@ -92,10 +92,7 @@ export async function seedDemo(): Promise<void> {
   if (charmander) {
     await CaughtPokemon.create({ childId: lucas.id, pokemonId: charmander.id, isActive: true, pokemonXp: 11000, caughtAt: new Date() });
   }
-  const pikachu = await Pokemon.findOne({ where: { pokedexNumber: 25 } });
-  if (pikachu) {
-    await CaughtPokemon.create({ childId: sofia.id, pokemonId: pikachu.id, isActive: true, pokemonXp: 3375, caughtAt: new Date() });
-  }
+  // Sofía no tiene Pokémon — entra al onboarding de selección inicial
 
   // ── Recompensas ───────────────────────────────────────────────────────────
   const rewardPantalla = await Reward.create({
