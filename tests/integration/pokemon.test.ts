@@ -68,7 +68,7 @@ describe('POST /api/pokemon/choose-initial', () => {
       .send({ pokemonId: starterId });
     expect(res.status).toBe(201);
     expect(res.body.isActive).toBe(true);
-    expect(res.body.pokemonXp).toBe(0);
+    expect(res.body.pokemonXp).toBe(1000);
   });
 
   it('409 if onboarding already completed', async () => {

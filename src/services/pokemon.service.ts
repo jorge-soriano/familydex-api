@@ -54,7 +54,7 @@ export const pokemonService = {
       childId,
       pokemonId,
       isActive: true,
-      pokemonXp: 0,
+      pokemonXp: 1000,
       caughtAt: new Date(),
     });
   },
@@ -221,7 +221,7 @@ export const pokemonService = {
     if (alreadyCaught) throw new AppError(409, 'Ya tienes este Pokémon en tu colección');
 
     return CaughtPokemon.create({
-      childId, pokemonId, isActive: false, pokemonXp: 0, caughtAt: new Date(),
+      childId, pokemonId, isActive: false, pokemonXp: 1000, caughtAt: new Date(),
     });
   },
 

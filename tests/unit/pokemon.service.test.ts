@@ -51,7 +51,7 @@ describe('pokemonService.chooseInitial', () => {
     await pokemonService.chooseInitial(2, 1);
 
     expect(MockCaught.create).toHaveBeenCalledWith(
-      expect.objectContaining({ childId: 2, pokemonId: 1, isActive: true, pokemonXp: 0 })
+      expect.objectContaining({ childId: 2, pokemonId: 1, isActive: true, pokemonXp: 1000 })
     );
   });
 
@@ -165,7 +165,7 @@ describe('pokemonService.capture', () => {
 
     await pokemonService.capture(2, 1);
     expect(MockCaught.create).toHaveBeenCalledWith(
-      expect.objectContaining({ isActive: false, pokemonXp: 0 })
+      expect.objectContaining({ isActive: false, pokemonXp: 1000 })
     );
   });
 
