@@ -90,6 +90,63 @@ describe('PATCH /api/rewards/:id/status', () => {
   });
 });
 
+// ── Delete reward ─────────────────────────────────────────────────────────────
+describe('DELETE /api/rewards/:id', () => {
+  it('admin deletes a reward → 204 and reward no longer appears in list', async () => {
+    const { adminToken } = await setup();
+    const create = await request(app).post('/api/rewards')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Para borrar', coinCost: 15 });
+    expect(create.status).toBe(201);
+    const rewardId = create.body.id;
+
+    const del = await request(app).delete(`/api/rewards/${rewardId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(del.status).toBe(204);
+
+    const list = await request(app).get('/api/rewards')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(list.body.find((r: any) => r.id === rewardId)).toBeUndefined();
+  });
+
+  it('404 when reward does not exist', async () => {
+    const { adminToken } = await setup();
+    const res = await request(app).delete('/api/rewards/99999')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('403 when child tries to delete a reward', async () => {
+    const { adminToken, childToken } = await setup();
+    const create = await request(app).post('/api/rewards')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Reward', coinCost: 10 });
+
+    const res = await request(app).delete(`/api/rewards/${create.body.id}`)
+      .set('Authorization', `Bearer ${childToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('admin cannot delete a reward from another family → 404', async () => {
+    // Create a second admin in a different family
+    const admin2Res = await request(app).post('/api/auth/register').send({
+      email: 'admin2@test.com', username: 'admin2',
+      password: 'Password1', confirmPassword: 'Password1',
+    });
+    const admin2Token: string = admin2Res.body.token;
+
+    const { adminToken } = await setup();
+    const create = await request(app).post('/api/rewards')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Reward familia 1', coinCost: 20 });
+
+    // admin2 tries to delete a reward that belongs to a different family
+    const res = await request(app).delete(`/api/rewards/${create.body.id}`)
+      .set('Authorization', `Bearer ${admin2Token}`);
+    expect(res.status).toBe(404);
+  });
+});
+
 // ── Child shop (HU-25) ────────────────────────────────────────────────────────
 describe('GET /api/rewards (child)', () => {
   it('child only sees active rewards', async () => {

@@ -10,6 +10,7 @@ router.use(authenticate);
 router.get('/',                  rewardController.getRewards);
 router.post('/',                 requireAdmin, rewardController.createReward);
 router.put('/:id',               requireAdmin, rewardController.editReward);
+router.delete('/:id',            requireAdmin, rewardController.deleteReward);
 router.patch('/:id/status',      requireAdmin, rewardController.toggleActive);
 
 // Requests

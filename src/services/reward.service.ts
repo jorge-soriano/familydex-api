@@ -45,6 +45,12 @@ export const rewardService = {
     return reward;
   },
 
+  async deleteReward(id: number, familyId: string): Promise<void> {
+    const reward = await Reward.findOne({ where: { id, familyId } });
+    if (!reward) throw new AppError(404, 'Recompensa no encontrada');
+    await reward.destroy();
+  },
+
   // ── List ───────────────────────────────────────────────────────────────────
 
   async getRewards(familyId: string, onlyActive = false): Promise<Reward[]> {

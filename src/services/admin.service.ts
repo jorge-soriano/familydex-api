@@ -153,10 +153,10 @@ export const adminService = {
     };
   },
 
-  /** Edit displayName and/or password — HU-30 */
+  /** Edit displayName, password and/or avatarColor — HU-30 */
   async updateChild(
     childId: number,
-    dto: { displayName?: string; password?: string },
+    dto: { displayName?: string; password?: string; avatarColor?: string },
     adminFamilyId: string
   ): Promise<void> {
     const user = await User.findOne({
@@ -168,9 +168,12 @@ export const adminService = {
       const passwordHash = await bcrypt.hash(dto.password, SALT_ROUNDS);
       await user.update({ passwordHash });
     }
-    if (dto.displayName) {
+    if (dto.displayName || dto.avatarColor !== undefined) {
       const profile = await ChildProfile.findOne({ where: { userId: childId } });
-      if (profile) await profile.update({ displayName: dto.displayName });
+      if (profile) await profile.update({
+        ...(dto.displayName ? { displayName: dto.displayName } : {}),
+        ...(dto.avatarColor !== undefined ? { avatarColor: dto.avatarColor } : {}),
+      });
     }
   },
 

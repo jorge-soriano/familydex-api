@@ -132,6 +132,31 @@ describe('PUT /api/admin/children/:id', () => {
       .send({ identifier: 'kid1', password: 'NewPass1' });
     expect(loginRes.status).toBe(200);
   });
+
+  it('admin updates child avatarColor — reflected in children list', async () => {
+    const { adminToken, childId } = await setup();
+    const res = await request(app)
+      .put(`/api/admin/children/${childId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ avatarColor: '#00FF00' });
+    expect(res.status).toBe(200);
+
+    const list = await request(app)
+      .get('/api/admin/children')
+      .set('Authorization', `Bearer ${adminToken}`);
+    const child = list.body.find((c: any) => c.id === childId);
+    expect(child).toBeDefined();
+    expect(child.avatarColor).toBe('#00FF00');
+  });
+
+  it('400 when no fields provided', async () => {
+    const { adminToken, childId } = await setup();
+    const res = await request(app)
+      .put(`/api/admin/children/${childId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
+    expect(res.status).toBe(400);
+  });
 });
 
 describe('PATCH /api/admin/children/:id/status', () => {

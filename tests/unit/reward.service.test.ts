@@ -143,3 +143,28 @@ describe('rewardService.rejectRequest', () => {
     await expect(rewardService.rejectRequest(10, FAMILY)).rejects.toBeInstanceOf(AppError);
   });
 });
+
+// ── deleteReward ──────────────────────────────────────────────────────────────
+describe('rewardService.deleteReward', () => {
+  it('calls destroy on the found reward', async () => {
+    const destroyMock = jest.fn().mockResolvedValue(undefined);
+    MockReward.findOne.mockResolvedValue({ id: 7, familyId: FAMILY, destroy: destroyMock });
+
+    await rewardService.deleteReward(7, FAMILY);
+
+    expect(MockReward.findOne).toHaveBeenCalledWith({ where: { id: 7, familyId: FAMILY } });
+    expect(destroyMock).toHaveBeenCalled();
+  });
+
+  it('throws 404 when reward does not exist in the family', async () => {
+    MockReward.findOne.mockResolvedValue(null);
+
+    await expect(rewardService.deleteReward(99, FAMILY)).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('throws 404 when reward belongs to a different family', async () => {
+    MockReward.findOne.mockResolvedValue(null); // findOne with { id, familyId } returns null for wrong family
+
+    await expect(rewardService.deleteReward(7, 'other-family')).rejects.toMatchObject({ status: 404 });
+  });
+});

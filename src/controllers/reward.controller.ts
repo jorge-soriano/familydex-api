@@ -35,6 +35,14 @@ export const rewardController = {
     } catch (err) { next(err); }
   },
 
+  // DELETE /api/rewards/:id (admin)
+  async deleteReward(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      await rewardService.deleteReward(Number(req.params.id), req.user!.familyId);
+      res.status(204).end();
+    } catch (err) { next(err); }
+  },
+
   // PATCH /api/rewards/:id/status (admin) — HU-24
   async toggleActive(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {

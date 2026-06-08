@@ -28,14 +28,14 @@ export const adminController = {
     } catch (err) { next(err); }
   },
 
-  // PUT /api/admin/children/:id — edit displayName / password — HU-30
+  // PUT /api/admin/children/:id — edit displayName / password / avatarColor — HU-30
   async updateChild(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { displayName, password } = req.body as { displayName?: string; password?: string };
-      if (!displayName && !password) {
-        res.status(400).json({ message: 'Proporciona al menos displayName o password' }); return;
+      const { displayName, password, avatarColor } = req.body as { displayName?: string; password?: string; avatarColor?: string };
+      if (!displayName && !password && avatarColor === undefined) {
+        res.status(400).json({ message: 'Proporciona al menos un campo a actualizar' }); return;
       }
-      await adminService.updateChild(Number(req.params.id), { displayName, password }, req.user!.familyId);
+      await adminService.updateChild(Number(req.params.id), { displayName, password, avatarColor }, req.user!.familyId);
       res.status(200).json({ message: 'Actualizado' });
     } catch (err) { next(err); }
   },
