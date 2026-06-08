@@ -23,6 +23,8 @@ export interface EditTaskDto {
   coinsReward?: number;
   xpReward?: number;
   dueDate?: string | null;
+  frequency?: TaskFrequency;
+  daysOfWeek?: string; // JSON string, only used when updating TaskSeries
 }
 
 export interface GetTasksFilters {
