@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
+import { Op } from 'sequelize';
 import { User } from '../models/user.model';
 import { ChildProfile } from '../models/childProfile.model';
 import { TaskSeries } from '../models/taskSeries.model';
@@ -37,8 +38,21 @@ async function dailyTask(
 }
 
 export async function seedDemo(): Promise<void> {
-  const exists = await User.findOne({ where: { email: DEMO_EMAIL } });
-  if (exists) return;
+  // Teardown: borrar todos los datos de la familia demo en orden de FK
+  const existing = await User.findOne({ where: { email: DEMO_EMAIL } });
+  if (existing) {
+    const familyUsers = await User.findAll({ where: { familyId: existing.familyId }, attributes: ['id'] });
+    const childIds = familyUsers.map((u) => u.id);
+    await RewardRequest.destroy({ where: { childId: { [Op.in]: childIds } } });
+    await CaughtPokemon.destroy({ where: { childId: { [Op.in]: childIds } } });
+    await Transaction.destroy({ where: { childId: { [Op.in]: childIds } } });
+    await Task.destroy({ where: { familyId: existing.familyId } });
+    await TaskSeries.destroy({ where: { familyId: existing.familyId } });
+    await Reward.destroy({ where: { familyId: existing.familyId } });
+    await ChildProfile.destroy({ where: { userId: { [Op.in]: childIds } } });
+    await User.destroy({ where: { familyId: existing.familyId } });
+    console.log('✓ Demo anterior eliminado');
+  }
 
   const familyId = randomUUID();
 
